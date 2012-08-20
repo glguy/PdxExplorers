@@ -1,0 +1,26 @@
+name: PdxExplorers
+main: com.gmail.emertens.PdxExplorers.PdxExplorers
+version: 1.0
+description: Separate the explorers from the rest. 
+authors: [emertens]
+
+commands:
+  explorers:
+    description: List and manage current explorers
+    usage: /<command>
+  explored:
+    description: List players who have finished an exploration
+    usage: /<command>
+
+permissions:
+  explorers.*:
+    description: All explorers commands
+    children:
+    - explorers.create
+    - explorers.toggle
+  explorers.create:
+    description: Create explorer start signs
+    default: op
+  explorers.toggle:
+    description: Toggle explorer status
+    default: op
