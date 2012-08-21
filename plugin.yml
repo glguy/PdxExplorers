@@ -1,15 +1,12 @@
 name: PdxExplorers
 main: com.gmail.emertens.PdxExplorers.PdxExplorers
-version: 1.0
+version: 1.1
 description: Separate the explorers from the rest. 
 authors: [emertens]
 
 commands:
   explorers:
     description: List and manage current explorers
-    usage: /<command>
-  explored:
-    description: List players who have finished an exploration
     usage: /<command>
 
 permissions:

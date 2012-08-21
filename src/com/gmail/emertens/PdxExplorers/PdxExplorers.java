@@ -36,11 +36,11 @@ public class PdxExplorers extends JavaPlugin {
 	private Map<String, String> explorers;
 	private Map<String, Set<String>> explorations;
 	private Set<Object[]> signs;
-	
+
 	private static final String SIGNS_DATA_FILE = "signs.yml";
 	private static final String EXPLORERS_DATA_FILE = "explorers.yml";
 	private static final String EXPLORATIONS_DATA_FILE = "explorations.yml";
-	
+
 	private static final String SIGN_HEADER = "[explorer]";
 	private static final String START_SIGN_COMMAND = "start";
 	private static final String VIEW_SIGN_COMMAND = "view";
@@ -49,12 +49,12 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String EXPLORATION_FAILURE_MSG = ChatColor.RED + "Exploration failed.";
 	private static final String EXPLORATION_STARTED_MSG = ChatColor.YELLOW + "You have started exploring " + ChatColor.GREEN + "%s"
 			+ ChatColor.YELLOW + "!";
-	
+
 	private static YmlDataFile signsYml;
 	private static YmlDataFile explorersYml;
 	private static YmlDataFile explorationsYml;
 
-	
+
 	/**
 	 * This counter increments on sign updates to track which name to show next.
 	 */
@@ -112,7 +112,7 @@ public class PdxExplorers extends JavaPlugin {
 			return builder.toString();
 		}
 	}
-	
+
 	/**
 	 * Predicate if these lines form a valid sign
 	 * @param sign An array of 4 signs on a sign
@@ -145,10 +145,10 @@ public class PdxExplorers extends JavaPlugin {
 		}
 		return ChatColor.YELLOW + "Explorers: " + ChatColor.WHITE + builder;
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	private void loadExplorations() {
-		
+
 		Map<String, Object> inputMap = new HashMap<String, Object>();
 
 		inputMap = (Map<String, Object>) explorationsYml.load();
@@ -165,10 +165,10 @@ public class PdxExplorers extends JavaPlugin {
 			}
 		}
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	private void loadExplorers() {
-	
+
 		Map<String, String> inputMap = (Map<String, String>)explorersYml.load();
 
 		if (inputMap == null) {
@@ -176,15 +176,15 @@ public class PdxExplorers extends JavaPlugin {
 			getLogger().warning("Using empty explorers list");
 
 		}
-		
+
 		explorers = Collections.synchronizedMap(inputMap);
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	private void loadSigns() {
 		ArrayList<Object> signsArray = (ArrayList<Object>)signsYml.load();
 		signs = new HashSet<Object[]>();
-		
+
 		if (signsArray == null) {
 			getLogger().warning("Using empty signs list");
 		} else {
@@ -193,7 +193,7 @@ public class PdxExplorers extends JavaPlugin {
 			}
 		}
 	}
-	
+
 	private void loadState() {
 		loadSigns();
 		loadExplorers();
@@ -212,17 +212,17 @@ public class PdxExplorers extends JavaPlugin {
 			switch (args.length) {
 			case 0:
 				if (sender instanceof Player) {
-					Player player = (Player) sender;
-					String token = explorers.get(player.getName());
-					if (token != null) {
-						sender.sendMessage(ChatColor.YELLOW + "Exploration: "
-								+ ChatColor.GREEN + token);
-					} else {
-						sender.sendMessage(ChatColor.YELLOW + "Exploration: "
-								+ ChatColor.RED + "None");
-					}
+					final Player player = (Player) sender;
+					final String token = explorers.get(player.getName());
+					final String formattedToken =
+							token == null
+							? ChatColor.RED + "None"
+							: ChatColor.GREEN + token;
+
+					sender.sendMessage(ChatColor.YELLOW + "Exploration: " + formattedToken);
+				} else {
+					sender.sendMessage(listExplorers());
 				}
-				sender.sendMessage(listExplorers());
 				break;
 			case 1:
 				if (sender.hasPermission("toggle")) {
@@ -265,9 +265,6 @@ public class PdxExplorers extends JavaPlugin {
 				sender.sendMessage(ChatColor.RED + "Usage: /explorers");
 				break;
 			}
-
-			return true;
-		} else if (command.getName().equalsIgnoreCase("explored")) {
 			return true;
 		} else {
 			return false;
@@ -282,42 +279,45 @@ public class PdxExplorers extends JavaPlugin {
 
 	@Override
 	public void onEnable() {
-		
-		File dataFolder = getDataFolder();
-		File signsFile = new File(dataFolder, SIGNS_DATA_FILE);
-		File explorersFile = new File(dataFolder, EXPLORERS_DATA_FILE);
-		File explorationsFile = new File(dataFolder, EXPLORATIONS_DATA_FILE);
+
+		// Configure data files
+		final File dataFolder = getDataFolder();
+		final File signsFile = new File(dataFolder, SIGNS_DATA_FILE);
+		final File explorersFile = new File(dataFolder, EXPLORERS_DATA_FILE);
+		final File explorationsFile = new File(dataFolder, EXPLORATIONS_DATA_FILE);
 		signsYml = new YmlDataFile(signsFile);
 		explorersYml = new YmlDataFile(explorersFile);
 		explorationsYml = new YmlDataFile(explorationsFile);
-		
+
+		// Load saved state
 		loadState();
 
-		PlayerListener listener = new PlayerListener(this);
+		// Register listeners
+		final PlayerListener listener = new PlayerListener(this);
 		getServer().getPluginManager().registerEvents(listener, this);
 
-		getServer().getScheduler().scheduleSyncRepeatingTask(this,
-				signScroller, 25, 25);
+		// Schedule threads
+		getServer().getScheduler().scheduleSyncRepeatingTask(this, signScroller, 25, 25);
 	}
 
 	private void playerFailed(Player player) {
-		String name = player.getName();
+		final String name = player.getName();
 		boolean failure = false;
 		synchronized (explorers) {
 			if (explorers.containsKey(name)) {
 				explorers.remove(name);
 				failure = true;
-			}	
+			}
 		}
 		if (failure) {
 			player.sendMessage(EXPLORATION_FAILURE_MSG);
 		}
 	}
-	
+
 	public void playerTeleported(Player player) {
 		playerFailed(player);
 	}
-	
+
 	public void playerDied(Player player) {
 		playerFailed(player);
 	}
@@ -327,8 +327,8 @@ public class PdxExplorers extends JavaPlugin {
 		saveState();
 	}
 
-	private void saveExplorations() throws IOException {		
-		Map<String, Object[]> output = new HashMap<String, Object[]>();
+	private void saveExplorations() throws IOException {
+		final Map<String, Object[]> output = new HashMap<String, Object[]>();
 		synchronized (explorations) {
 			for (Entry<String, Set<String>> e : explorations.entrySet()) {
 				output.put(e.getKey(), e.getValue().toArray());
@@ -345,12 +345,12 @@ public class PdxExplorers extends JavaPlugin {
 	}
 
 	public void saveState() {
-		File dataFolder = getDataFolder();
+		final File dataFolder = getDataFolder();
 
 		if (!dataFolder.isDirectory()) {
 			dataFolder.mkdirs();
 		}
-		
+
 		try {
 			saveExplorations();
 		} catch (IOException e) {
@@ -395,7 +395,7 @@ public class PdxExplorers extends JavaPlugin {
 		final String playersToken = explorers.get(name);
 		String message;
 		boolean broadcast = false;
-		
+
 		if (playersToken == null) {
 			message = NOT_STARTED_MSG;
 		} else if (playersToken.equalsIgnoreCase(token)) {
@@ -408,7 +408,7 @@ public class PdxExplorers extends JavaPlugin {
 		} else {
 			message = String.format(BAD_FINISH_MSG, token, playersToken);
 		}
-		
+
 		if (broadcast) {
 			getServer().broadcastMessage(message);
 		} else {
@@ -419,10 +419,10 @@ public class PdxExplorers extends JavaPlugin {
 	private void activateStartSign(final Player player, final String token) {
 		String message;
 		final String name = player.getName();
-		
+
 		synchronized (explorers) {
 			final String currentToken = explorers.get(name);
-			
+
 			if (currentToken != null && currentToken.equalsIgnoreCase(token)) {
 				message = ALREADY_EXPLORING_MSG;
 			} else {
@@ -435,7 +435,7 @@ public class PdxExplorers extends JavaPlugin {
 				explorers.put(name, token);
 			}
 		}
-		
+
 		player.sendMessage(message);
 		saveState();
 	}
@@ -445,24 +445,23 @@ public class PdxExplorers extends JavaPlugin {
 	 */
 	private void updateSigns() {
 		Set<Object[]> badSigns = new HashSet<Object[]>();
-		
+
 		for (Object[] location : signs) {
 			final World world = getServer().getWorld((String)location[0]);
 			final int x = (Integer)location[1];
 			final int y = (Integer)location[2];
 			final int z = (Integer)location[3];
-			
-			final Block block = world.getBlockAt(x, y, z);
-			if (block.getChunk().isLoaded()) {
-	
+
+			if (world.isChunkLoaded(x/16, z/16)) {
+				final Block block = world.getBlockAt(x, y, z);
 				final BlockState state = block.getState();
 				if (state instanceof Sign) {
 					final Sign sign = (Sign) state;
-	
+
 					if (isExplorerSign(sign.getLines())) {
 						String token = sign.getLine(2);
 						Set<String> players = explorations.get(token);
-	
+
 						if (players != null) {
 							Object[] playerArray = players.toArray();
 							final int offset = counter % playerArray.length;
@@ -470,7 +469,7 @@ public class PdxExplorers extends JavaPlugin {
 							sign.setLine(3, nextName);
 							sign.update();
 						}
-						
+
 						continue; // Avoid adding this to badSigns
 					}
 				}

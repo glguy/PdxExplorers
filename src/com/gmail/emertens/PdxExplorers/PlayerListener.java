@@ -11,52 +11,46 @@ import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.block.Sign;
 
 public class PlayerListener implements Listener {
-	
+
 	PdxExplorers plugin;
-	
+
 	public PlayerListener(PdxExplorers p) {
 		plugin = p;
 	}
-	
+
 	@EventHandler(ignoreCancelled = true)
 	public void onTeleport(PlayerTeleportEvent event) {
-		TeleportCause cause = event.getCause();
-		if (cause == TeleportCause.COMMAND || cause == TeleportCause.PLUGIN) {
-			plugin.playerTeleported(event.getPlayer());
-		}
+		plugin.playerTeleported(event.getPlayer());
 	}
-	
+
 	@EventHandler(ignoreCancelled = true)
 	public void onDeath(PlayerDeathEvent event) {
 		plugin.playerDied(event.getEntity());
 	}
-	
+
 	@EventHandler(ignoreCancelled = true)
 	public void onInteract(PlayerInteractEvent event) {
-		
 		if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
 			return;
 		}
-		
+
 		Block block = event.getClickedBlock();
 		BlockState state = block.getState();
 		if (!(state instanceof Sign)) {
 			return;
 		}
-		
-		Sign sign = (Sign)state;
-		
+
+		final Sign sign = (Sign)state;
 		if (!PdxExplorers.isExplorerSign(sign.getLines())){
 			return;
 		}
-		
+
 		plugin.activateSign(event.getPlayer(), sign.getLine(1), sign.getLine(2));
 	}
-	
+
 	@EventHandler(ignoreCancelled = true)
 	public void onSignChange(SignChangeEvent event) {
 		if (PdxExplorers.isExplorerSign(event.getLines())) {
