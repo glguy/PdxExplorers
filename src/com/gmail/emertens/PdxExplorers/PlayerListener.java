@@ -67,7 +67,7 @@ public class PlayerListener implements Listener {
 			}
 		}
 	}
-	
+
 	@EventHandler(ignoreCancelled = true)
 	public void onBlockPlace(BlockPlaceEvent event) {
 		Block block = event.getBlockAgainst();

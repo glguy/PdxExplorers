@@ -12,6 +12,7 @@ import java.util.Set;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
@@ -19,6 +20,7 @@ import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class PdxExplorers extends JavaPlugin {
@@ -33,7 +35,7 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String ALREADY_EXPLORING_MSG = ChatColor.YELLOW
 			+ "You are already on this exploration.";
 	public static final String createPermission = "explorers.create";
-	
+
 	private Map<String, PlayerProgress> explorers;
 	private Map<String, Route> routes;
 	private Set<Object[]> signs;
@@ -73,16 +75,16 @@ public class PdxExplorers extends JavaPlugin {
 	 * @param token Exploration's token
 	 */
 	private void addPlayerToExploration(String name, String token) {
-		
+
 		Route route;
 		synchronized (routes) {
 		    route = routes.get(token);
 			if (route == null) {
 				route = new Route();
 				routes.put(token, route);
-			}	
+			}
 		}
-		
+
 		route.addWinner(name);
 		saveState();
 	}
@@ -91,7 +93,7 @@ public class PdxExplorers extends JavaPlugin {
 		final String token = strings[2];
 		final String name = player.getName();
 		boolean success;
-		
+
 		synchronized (routes) {
 			Route r = routes.get(token);
 			if (r == null) {
@@ -113,9 +115,9 @@ public class PdxExplorers extends JavaPlugin {
 
 	private String explorationList(String token) {
 		Route route = routes.get(token);
-		
+
 		if (route.hasWinners()) {
-			
+
 			StringBuilder builder = new StringBuilder();
 
 			builder.append(ChatColor.GREEN);
@@ -149,7 +151,7 @@ public class PdxExplorers extends JavaPlugin {
 				sign[1].equalsIgnoreCase(VIEW_SIGN_COMMAND))
 			&& !sign[2].isEmpty();
 	}
-	
+
 	public static Integer parseWaypoint(String str) {
 		if (str.startsWith("Waypoint: ")) {
 			try {
@@ -161,13 +163,13 @@ public class PdxExplorers extends JavaPlugin {
 			return null;
 		}
 	}
-	
+
 	public static Integer parseFinish(String str) {
 		if (str.equalsIgnoreCase(FINISH_SIGN_COMMAND)) {
 			return 1;
 		} else if (str.toLowerCase().startsWith(FINISH_SIGN_COMMAND + ": ")){
 			try {
-				return Integer.parseInt(str.substring(FINISH_SIGN_COMMAND.length() + 2), 10); 
+				return Integer.parseInt(str.substring(FINISH_SIGN_COMMAND.length() + 2), 10);
 			} catch (NumberFormatException e) {
 				return null;
 			}
@@ -190,7 +192,7 @@ public class PdxExplorers extends JavaPlugin {
 					if (!first) {
 						builder.append(ChatColor.GRAY + ", ");
 					}
-					
+
 					builder.append(ChatColor.RESET
 							+ player.getDisplayName()
 							+ ChatColor.GRAY + ": "
@@ -282,7 +284,7 @@ public class PdxExplorers extends JavaPlugin {
 		} else {
 			player = null;
 		}
-		
+
 		if (command.getName().equalsIgnoreCase(EXPLORERS_COMMAND)) {
 			if (args.length == 0 && player != null) {
 				final String name = player.getName();
@@ -307,44 +309,83 @@ public class PdxExplorers extends JavaPlugin {
 					sender.sendMessage(r.toChatString());
 				}
 				return true;
+			} else if (args.length == 5 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("addreward")) {
+				addRewardsCommand(sender, args[2], args[3], args[4]);
+				return true;
 			} else if (args.length == 3 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("delete")) {
-				synchronized (routes) {
-					Route r = routes.get(args[2]);
-					if (r == null) {
-						sender.sendMessage(ChatColor.RED + "No such route");
-					} else {
-						if (player == null || r.isOwner(player.getName()) || player.hasPermission("explorers.delete")) {
-							routes.remove(args[2]);
-							sender.sendMessage(ChatColor.RED + "Success.");
-						} else {
-							sender.sendMessage(ChatColor.RED + "Permission denied.");
-						}
-					}	
-				}
-				
+				deleteRouteCommand(sender, player, args[2]);
 				return true;
 			} else if (args.length == 1 && args[0].equalsIgnoreCase("version")) {
 				sender.sendMessage(getDescription().getVersion());
 				return true;
 			}
 		}
-		return false;	
+		return false;
+	}
+
+	private void deleteRouteCommand(CommandSender sender, final Player player,
+			String routeName) {
+		synchronized (routes) {
+			Route r = routes.get(routeName);
+			if (r == null) {
+				sender.sendMessage(ChatColor.RED + "No such route");
+			} else {
+				if (player == null || r.isOwner(player.getName())
+						|| player.hasPermission("explorers.delete")) {
+					routes.remove(routeName);
+					sender.sendMessage(ChatColor.RED + "Success");
+				} else {
+					sender.sendMessage(ChatColor.RED + "Permission denied");
+				}
+			}
+		}
+	}
+
+	private void addRewardsCommand(CommandSender sender, String route, String materialString, String amountString) {
+		final Route r = routes.get(route);
+		if (r == null) {
+			sender.sendMessage(ChatColor.RED + "No such route");
+			return;
+		}
+
+
+		if (!sender.hasPermission("explorers.rewards")) {
+			sender.sendMessage(ChatColor.RED + "Permission denied");
+			return;
+		}
+
+		final Material material = Material.matchMaterial(materialString);
+		if (material == null) {
+			sender.sendMessage(ChatColor.RED + "Unable to parse material");
+			return;
+		}
+
+		final Integer amount;
+		try {
+			amount = Integer.parseInt(amountString, 10);
+		} catch (NumberFormatException e) {
+			sender.sendMessage(ChatColor.RED + "Unable to parse amount");
+			return;
+		}
+
+		r.addReward(material, amount);
+		sender.sendMessage(ChatColor.RED + "Reward updated");
 	}
 
 	private String routesList() {
 		StringBuilder builder = new StringBuilder();
 		boolean first = true;
 		builder.append("Routes: ");
-		
+
 		for (String token : routes.keySet()) {
 			if (!first) builder.append(ChatColor.GRAY + ", ");
 			first = false;
 			builder.append(ChatColor.YELLOW + token);
 		}
-		
+
 		return builder.toString();
 	}
-	
+
 	@Override
 	public void onDisable() {
 		saveState();
@@ -402,7 +443,7 @@ public class PdxExplorers extends JavaPlugin {
 
 	private void saveExplorations() throws IOException {
 		final Map<String, Object> output = new HashMap<String, Object>();
-		
+
 		synchronized (routes) {
 			for (Entry<String, Route> e : routes.entrySet()) {
 				output.put(e.getKey(), e.getValue().toMap());
@@ -471,7 +512,7 @@ public class PdxExplorers extends JavaPlugin {
 
 	private void activateWaypointSign(Player player, String token, int w) {
 		PlayerProgress progress = explorers.get(player.getName());
-		
+
 		if (progress == null) {
 			player.sendMessage(NOT_STARTED_MSG);
 		} else {
@@ -492,19 +533,25 @@ public class PdxExplorers extends JavaPlugin {
 		final String name = player.getName();
 		final PlayerProgress progress = explorers.get(name);
 
-		String message;
+		final String message;
 		boolean broadcast = false;
+
+		Route r = routes.get(token);
+		if (r == null) {
+			r = new Route(token);
+		}
 
 		if (progress == null) {
 			message = NOT_STARTED_MSG;
 		} else if (progress.getToken().equalsIgnoreCase(token)) {
-			
+
 			if (progress.getWaypoints() + 1 == w) {
 				broadcast = true;
 				message = String.format(SUCCESS_MSG, name, token);
-				explorers.remove(name);
 
+				explorers.remove(name);
 				addPlayerToExploration(name, token);
+				issueRewards(player, r);
 				saveState();
 			} else {
 				message = ChatColor.RED + "You need waypoint " + (progress.getWaypoints()+1);
@@ -517,6 +564,14 @@ public class PdxExplorers extends JavaPlugin {
 			getServer().broadcastMessage(message);
 		} else {
 			player.sendMessage(message);
+		}
+	}
+
+	private void issueRewards(final Player player, Route r) {
+		for (Entry<Material, Integer> e : r.getRewards().entrySet()) {
+			ItemStack stack = new ItemStack(e.getKey(), e.getValue());
+			player.getInventory().addItem(stack);
+			player.sendMessage("Exploration reward given: " + e.getValue() + " " + e.getKey());
 		}
 	}
 
