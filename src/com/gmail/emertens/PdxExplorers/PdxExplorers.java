@@ -1,11 +1,7 @@
 package com.gmail.emertens.PdxExplorers;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,12 +20,15 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.DumperOptions.FlowStyle;
-import org.yaml.snakeyaml.Yaml;
 
 public class PdxExplorers extends JavaPlugin {
 
+	private static final String BAD_FINISH_MSG = "You aren't on " + ChatColor.GREEN + "%s"
+			+ ChatColor.RESET + ", you are on " + ChatColor.GREEN
+			+ "%s";
+	private static final String SUCCESS_MSG = ChatColor.YELLOW + "%s completed the "
+			+ ChatColor.GREEN + "%s" + ChatColor.YELLOW
+			+ " exploration!";
 	private static final String NOT_STARTED_MSG = "You aren't on an exploration now.";
 	private static final String ALREADY_EXPLORING_MSG = ChatColor.YELLOW
 			+ "You are already on this exploration.";
@@ -38,14 +37,23 @@ public class PdxExplorers extends JavaPlugin {
 	private Map<String, Set<String>> explorations;
 	private Set<Object[]> signs;
 	
-	private static final String SIGN_HEADER = "[exporer]";
+	private static final String SIGNS_DATA_FILE = "signs.yml";
+	private static final String EXPLORERS_DATA_FILE = "explorers.yml";
+	private static final String EXPLORATIONS_DATA_FILE = "explorations.yml";
+	
+	private static final String SIGN_HEADER = "[explorer]";
 	private static final String START_SIGN_COMMAND = "start";
 	private static final String VIEW_SIGN_COMMAND = "view";
 	private static final String FINISH_SIGN_COMMAND = "finish";
 	private static final String EXPLORERS_COMMAND = "explorers";
 	private static final String EXPLORATION_FAILURE_MSG = ChatColor.RED + "Exploration failed.";
-	private static final String EXPLORATION_STARTED_MSG = ChatColor.YELLOW + "You have started exploring " + ChatColor.GREEN + "%0"
+	private static final String EXPLORATION_STARTED_MSG = ChatColor.YELLOW + "You have started exploring " + ChatColor.GREEN + "%s"
 			+ ChatColor.YELLOW + "!";
+	
+	private static YmlDataFile signsYml;
+	private static YmlDataFile explorersYml;
+	private static YmlDataFile explorationsYml;
+
 	
 	/**
 	 * This counter increments on sign updates to track which name to show next.
@@ -139,95 +147,57 @@ public class PdxExplorers extends JavaPlugin {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private void loadExplorations(File file) {
-		DumperOptions options = new DumperOptions();
-		options.setDefaultFlowStyle(FlowStyle.BLOCK);
-		options.setAllowUnicode(true);
-		Yaml yaml = new Yaml(options);
-
+	private void loadExplorations() {
+		
 		Map<String, Object> inputMap = new HashMap<String, Object>();
 
-		try {
-			FileInputStream reader = new FileInputStream(file);
-			InputStreamReader isr = new InputStreamReader(reader, "UTF8");
+		inputMap = (Map<String, Object>) explorationsYml.load();
+		explorations = Collections
+				.synchronizedMap(new HashMap<String, Set<String>>());
 
-			inputMap = yaml.loadAs(isr, Map.class);
-			isr.close();
-		} catch (IOException e) {
-			getLogger().warning("Using empty signs list");
-		}
-
-		explorations = Collections.synchronizedMap(new HashMap<String, Set<String>>());
-		for (Entry<String, Object> e : inputMap.entrySet()) {
-			Set<String> set = new HashSet<String>();
-			for (Object s : (ArrayList<Object>) e.getValue()) {
-				set.add((String) s);
+		if (inputMap != null) {
+			for (Entry<String, Object> e : inputMap.entrySet()) {
+				Set<String> set = new HashSet<String>();
+				for (Object s : (ArrayList<Object>) e.getValue()) {
+					set.add((String) s);
+				}
+				explorations.put(e.getKey(), set);
 			}
-			explorations.put(e.getKey(), set);
 		}
 	}
 	
 	@SuppressWarnings("unchecked")
-	private void loadExplorers(File file) {
-		DumperOptions options = new DumperOptions();
-		options.setDefaultFlowStyle(FlowStyle.BLOCK);
-		options.setAllowUnicode(true);
-		Yaml yaml = new Yaml(options);
+	private void loadExplorers() {
+	
+		Map<String, String> inputMap = (Map<String, String>)explorersYml.load();
 
-		Map<String, String> inputMap = new HashMap<String, String>();
+		if (inputMap == null) {
+			inputMap = new HashMap<String,String>();
+			getLogger().warning("Using empty explorers list");
 
-		try {
-			FileInputStream reader = new FileInputStream(file);
-			InputStreamReader isr = new InputStreamReader(reader, "UTF8");
-
-			inputMap = yaml.loadAs(isr, Map.class);
-			isr.close();
-		} catch (IOException e) {
-			getLogger().warning("Using empty signs list");
 		}
-
+		
 		explorers = Collections.synchronizedMap(inputMap);
 	}
 	
 	@SuppressWarnings("unchecked")
-	private void loadSigns(File file) {
-		DumperOptions options = new DumperOptions();
-		options.setDefaultFlowStyle(FlowStyle.BLOCK);
-		options.setAllowUnicode(true);
-		Yaml yaml = new Yaml(options);
-
-		ArrayList<Object> signsArray = null;
-
-		try {
-			FileInputStream reader = new FileInputStream(file);
-			InputStreamReader isr = new InputStreamReader(reader, "UTF8");
-
-			signsArray = (ArrayList<Object>) yaml.load(isr);
-			isr.close();
-		} catch (IOException e) {
-			getLogger().warning("Using empty signs list");
-		}
-
+	private void loadSigns() {
+		ArrayList<Object> signsArray = (ArrayList<Object>)signsYml.load();
 		signs = new HashSet<Object[]>();
-
-		if (signsArray != null) {
+		
+		if (signsArray == null) {
+			getLogger().warning("Using empty signs list");
+		} else {
 			for (Object a : signsArray) {
-				signs.add(((ArrayList<Object>)a).toArray());
+				signs.add(((ArrayList<Object>) a).toArray());
 			}
 		}
 	}
 	
 	private void loadState() {
-		File dataFolder = getDataFolder();
-
-		File signsFile = new File(dataFolder, "signs.yml");
-		loadSigns(signsFile);
-		
-		File explorersFile = new File(dataFolder, "explorers.yml");
-		loadExplorers(explorersFile);
-		
-		File explorationsFile = new File(dataFolder, "explorations.yml");
-		loadExplorations(explorationsFile);
+		loadSigns();
+		loadExplorers();
+		loadExplorations();
 	}
 
 	private static Object[] locationToArray(Location location) {
@@ -312,6 +282,15 @@ public class PdxExplorers extends JavaPlugin {
 
 	@Override
 	public void onEnable() {
+		
+		File dataFolder = getDataFolder();
+		File signsFile = new File(dataFolder, SIGNS_DATA_FILE);
+		File explorersFile = new File(dataFolder, EXPLORERS_DATA_FILE);
+		File explorationsFile = new File(dataFolder, EXPLORATIONS_DATA_FILE);
+		signsYml = new YmlDataFile(signsFile);
+		explorersYml = new YmlDataFile(explorersFile);
+		explorationsYml = new YmlDataFile(explorationsFile);
+		
 		loadState();
 
 		PlayerListener listener = new PlayerListener(this);
@@ -348,59 +327,21 @@ public class PdxExplorers extends JavaPlugin {
 		saveState();
 	}
 
-	private void saveExplorations(File file) throws IOException {		
-		DumperOptions options = new DumperOptions();
-		options.setDefaultFlowStyle(FlowStyle.BLOCK);
-		options.setAllowUnicode(true);
-		
+	private void saveExplorations() throws IOException {		
 		Map<String, Object[]> output = new HashMap<String, Object[]>();
 		synchronized (explorations) {
 			for (Entry<String, Set<String>> e : explorations.entrySet()) {
 				output.put(e.getKey(), e.getValue().toArray());
 			}
 		}
-		
-		if (file.isFile()) {
-			file.delete();
-		}
-		
-		FileOutputStream writer = new FileOutputStream(file);
-		 OutputStreamWriter osw = new OutputStreamWriter(writer, "UTF8");
-		Yaml yaml = new Yaml(options);
-		yaml.dump(output, osw);
-		osw.close();
+		explorationsYml.save(output);
 	}
-	private void saveExplorers(File file) throws IOException {
-		DumperOptions options = new DumperOptions();
-		options.setDefaultFlowStyle(FlowStyle.BLOCK);
-		options.setAllowUnicode(true);
-		
-		if (file.isFile()) {
-			file.delete();
-		}
-		
-		FileOutputStream writer = new FileOutputStream(file);
-		 OutputStreamWriter osw = new OutputStreamWriter(writer, "UTF8");
-		Yaml yaml = new Yaml(options);
-		yaml.dump(explorers, osw);
-		osw.close();
+	private void saveExplorers() throws IOException {
+		explorersYml.save(explorers);
 	}
 
-	private void saveSigns(File file) throws IOException {
-		DumperOptions options = new DumperOptions();
-		options.setDefaultFlowStyle(FlowStyle.BLOCK);
-		options.setAllowUnicode(true);
-		
-		if (file.isFile()) {
-			file.delete();
-		}
-		
-		FileOutputStream writer = new FileOutputStream(file);
-		 OutputStreamWriter osw = new OutputStreamWriter(writer, "UTF8");
-
-		Yaml yaml = new Yaml(options);
-		yaml.dump(signs.toArray(), osw);
-		osw.close();
+	private void saveSigns() throws IOException {
+		signsYml.save(signs.toArray());
 	}
 
 	public void saveState() {
@@ -411,25 +352,22 @@ public class PdxExplorers extends JavaPlugin {
 		}
 		
 		try {
-		File explorationsFile = new File(dataFolder, "explorations.yml");
-		saveExplorations(explorationsFile);
+			saveExplorations();
 		} catch (IOException e) {
 			getLogger().warning("Unable to save explorations " + e.toString());
 		}
-		
+
 		try {
-		File explorersFile = new File(dataFolder, "explorers.yml");
-		saveExplorers(explorersFile);
+			saveExplorers();
 		} catch (IOException e) {
 			getLogger().warning("Unable to save explorers " + e.toString());
 		}
-		
+
 		try {
-			File signsFile = new File(dataFolder, "signs.yml");
-			saveSigns(signsFile);
-			} catch (IOException e) {
-				getLogger().warning("Unable to save signs " + e.toString());
-			}
+			saveSigns();
+		} catch (IOException e) {
+			getLogger().warning("Unable to save signs " + e.toString());
+		}
 	}
 
 	/**
@@ -462,18 +400,13 @@ public class PdxExplorers extends JavaPlugin {
 			message = NOT_STARTED_MSG;
 		} else if (playersToken.equalsIgnoreCase(token)) {
 			broadcast = true;
-			message =
-					ChatColor.YELLOW + name + " completed the "
-							+ ChatColor.GREEN + token + ChatColor.YELLOW
-							+ " exploration!";
+			message = String.format(SUCCESS_MSG, name, token);
 			explorers.remove(name);
 
 			addPlayerToExploration(name, token);
 			saveState();
 		} else {
-			message = "You aren't on " + ChatColor.GREEN + token
-					+ ChatColor.RESET + ", you are on " + ChatColor.GREEN
-					+ playersToken;
+			message = String.format(BAD_FINISH_MSG, token, playersToken);
 		}
 		
 		if (broadcast) {
@@ -511,6 +444,8 @@ public class PdxExplorers extends JavaPlugin {
 	 * Update the command signs to display the next player's name.
 	 */
 	private void updateSigns() {
+		Set<Object[]> badSigns = new HashSet<Object[]>();
+		
 		for (Object[] location : signs) {
 			final World world = getServer().getWorld((String)location[0]);
 			final int x = (Integer)location[1];
@@ -535,10 +470,14 @@ public class PdxExplorers extends JavaPlugin {
 							sign.setLine(3, nextName);
 							sign.update();
 						}
+						
+						continue; // Avoid adding this to badSigns
 					}
 				}
+				badSigns.add(location);
 			}
 		}
+		signs.removeAll(badSigns);
 		counter++;
 	}
 }

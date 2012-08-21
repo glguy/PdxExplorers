@@ -7,7 +7,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -33,7 +32,7 @@ public class PlayerListener implements Listener {
 	
 	@EventHandler(ignoreCancelled = true)
 	public void onDeath(PlayerDeathEvent event) {
-		plugin.playerTeleported(event.getEntity());
+		plugin.playerDied(event.getEntity());
 	}
 	
 	@EventHandler(ignoreCancelled = true)
@@ -71,9 +70,4 @@ public class PlayerListener implements Listener {
 			}
 		}
 	}
-
-	public void onBlockBreak(BlockBreakEvent event) {
-		plugin.removeExplorationSign(event.getBlock().getLocation());
-	}
-	
 }
