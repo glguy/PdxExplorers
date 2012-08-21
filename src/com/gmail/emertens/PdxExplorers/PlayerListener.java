@@ -7,10 +7,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.block.Sign;
 
 public class PlayerListener implements Listener {
@@ -23,7 +25,9 @@ public class PlayerListener implements Listener {
 
 	@EventHandler(ignoreCancelled = true)
 	public void onTeleport(PlayerTeleportEvent event) {
-		plugin.playerTeleported(event.getPlayer());
+		if (event.getCause() != TeleportCause.UNKNOWN) {
+			plugin.playerTeleported(event.getPlayer());
+		}
 	}
 
 	@EventHandler(ignoreCancelled = true)
@@ -55,12 +59,23 @@ public class PlayerListener implements Listener {
 	public void onSignChange(SignChangeEvent event) {
 		if (PdxExplorers.isExplorerSign(event.getLines())) {
 			Player player = event.getPlayer();
-			if (player.hasPermission(PdxExplorers.createPermission)) {
-				plugin.addExplorationSign(event.getBlock().getLocation());
+			if (plugin.addExplorationSign(event.getLines(), player, event.getBlock().getLocation())) {
 				player.sendMessage(ChatColor.RED + "Explorer sign created.");
 			} else {
 				event.setCancelled(true);
 				player.sendMessage(ChatColor.RED + "Explorer sign creation is restricted.");
+			}
+		}
+	}
+	
+	@EventHandler(ignoreCancelled = true)
+	public void onBlockPlace(BlockPlaceEvent event) {
+		Block block = event.getBlockAgainst();
+		BlockState state = block.getState();
+		if (state instanceof Sign) {
+			Sign sign = (Sign)state;
+			if (PdxExplorers.isExplorerSign(sign.getLines())) {
+				event.setCancelled(true);
 			}
 		}
 	}

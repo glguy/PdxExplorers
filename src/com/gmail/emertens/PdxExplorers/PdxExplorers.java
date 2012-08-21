@@ -33,8 +33,9 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String ALREADY_EXPLORING_MSG = ChatColor.YELLOW
 			+ "You are already on this exploration.";
 	public static final String createPermission = "explorers.create";
-	private Map<String, String> explorers;
-	private Map<String, Set<String>> explorations;
+	
+	private Map<String, PlayerProgress> explorers;
+	private Map<String, Route> routes;
 	private Set<Object[]> signs;
 
 	private static final String SIGNS_DATA_FILE = "signs.yml";
@@ -72,29 +73,49 @@ public class PdxExplorers extends JavaPlugin {
 	 * @param token Exploration's token
 	 */
 	private void addPlayerToExploration(String name, String token) {
-		synchronized (explorations) {
-			Set<String> players = explorations.get(token);
-
-			if (players == null) {
-				players = new HashSet<String>();
-			}
-
-			players.add(name);
-			explorations.put(token, players);
+		
+		Route route;
+		synchronized (routes) {
+		    route = routes.get(token);
+			if (route == null) {
+				route = new Route();
+				routes.put(token, route);
+			}	
 		}
+		
+		route.addWinner(name);
 		saveState();
 	}
 
-	public void addExplorationSign(Location location) {
-		signs.add(locationToArray(location));
-		saveState();
+	public boolean addExplorationSign(String[] strings, Player player, Location location) {
+		final String token = strings[2];
+		final String name = player.getName();
+		boolean success;
+		
+		synchronized (routes) {
+			Route r = routes.get(token);
+			if (r == null) {
+				routes.put(token, new Route(name));
+				success = true;
+			} else if (r.isOwner(name) || player.hasPermission(PdxExplorers.createPermission)) {
+				success = true;
+			} else {
+				success = false;
+			}
+		}
+
+		if (success) {
+			signs.add(locationToArray(location));
+			saveState();
+		}
+		return success;
 	}
 
 	private String explorationList(String token) {
-		Set<String> players = explorations.get(token);
-		if (players == null) {
-			return ChatColor.YELLOW + "No one has finished this exploration.";
-		} else {
+		Route route = routes.get(token);
+		
+		if (route.hasWinners()) {
+			
 			StringBuilder builder = new StringBuilder();
 
 			builder.append(ChatColor.GREEN);
@@ -103,13 +124,15 @@ public class PdxExplorers extends JavaPlugin {
 			builder.append(": ");
 
 			boolean first = true;
-			for (String player : players) {
+			for (String player : route.getWinners()) {
 				if (!first)
 					builder.append(ChatColor.GRAY + ", ");
 				builder.append(ChatColor.RESET + player);
 				first = false;
 			}
 			return builder.toString();
+		} else {
+			return ChatColor.YELLOW + "No one has finished this exploration.";
 		}
 	}
 
@@ -121,9 +144,36 @@ public class PdxExplorers extends JavaPlugin {
 	public static boolean isExplorerSign(final String[] sign) {
 		return sign[0].equalsIgnoreCase(SIGN_HEADER)
 			&& (sign[1].equalsIgnoreCase(START_SIGN_COMMAND) ||
-				sign[1].equalsIgnoreCase(FINISH_SIGN_COMMAND) ||
+				parseFinish(sign[1]) != null ||
+				parseWaypoint(sign[1]) != null ||
 				sign[1].equalsIgnoreCase(VIEW_SIGN_COMMAND))
 			&& !sign[2].isEmpty();
+	}
+	
+	public static Integer parseWaypoint(String str) {
+		if (str.startsWith("Waypoint: ")) {
+			try {
+			return Integer.parseInt(str.substring(10), 10);
+			} catch (NumberFormatException e) {
+				return null;
+			}
+		} else {
+			return null;
+		}
+	}
+	
+	public static Integer parseFinish(String str) {
+		if (str.equalsIgnoreCase(FINISH_SIGN_COMMAND)) {
+			return 1;
+		} else if (str.toLowerCase().startsWith(FINISH_SIGN_COMMAND + ": ")){
+			try {
+				return Integer.parseInt(str.substring(FINISH_SIGN_COMMAND.length() + 2), 10); 
+			} catch (NumberFormatException e) {
+				return null;
+			}
+		} else {
+			return null;
+		}
 	}
 
 	private String listExplorers() {
@@ -133,35 +183,46 @@ public class PdxExplorers extends JavaPlugin {
 		} else {
 			boolean first = true;
 
-			for (Entry<String, String> entry : explorers.entrySet()) {
-				if (!first)
-					builder.append(ChatColor.GRAY + ", ");
+			for (Entry<String, PlayerProgress> entry : explorers.entrySet()) {
 				String name = entry.getKey();
-				String token = entry.getValue();
-				builder.append(ChatColor.RESET + name + ChatColor.GRAY + ": "
-						+ ChatColor.GREEN + token);
-				first = false;
+				Player player = getServer().getPlayerExact(name);
+				if (player != null) {
+					if (!first) {
+						builder.append(ChatColor.GRAY + ", ");
+					}
+					
+					builder.append(ChatColor.RESET
+							+ player.getDisplayName()
+							+ ChatColor.GRAY + ": "
+							+ entry.getValue().toChatString());
+					first = false;
+				}
 			}
 		}
 		return ChatColor.YELLOW + "Explorers: " + ChatColor.WHITE + builder;
 	}
 
 	@SuppressWarnings("unchecked")
-	private void loadExplorations() {
+	private void loadRoutes() {
 
 		Map<String, Object> inputMap = new HashMap<String, Object>();
 
 		inputMap = (Map<String, Object>) explorationsYml.load();
-		explorations = Collections
-				.synchronizedMap(new HashMap<String, Set<String>>());
+		routes = Collections
+				.synchronizedMap(new HashMap<String, Route>());
 
 		if (inputMap != null) {
 			for (Entry<String, Object> e : inputMap.entrySet()) {
-				Set<String> set = new HashSet<String>();
-				for (Object s : (ArrayList<Object>) e.getValue()) {
-					set.add((String) s);
+				Object v = e.getValue();
+				if (v instanceof Map<?,?>) {
+					routes.put(e.getKey(), new Route((Map<String,Object>)v));
+				} else if (v instanceof ArrayList<?>) {
+					Route r = new Route();
+					for (Object s : (ArrayList<Object>) e.getValue()) {
+						r.addWinner((String)s);
+					}
+					routes.put(e.getKey(), r);
 				}
-				explorations.put(e.getKey(), set);
 			}
 		}
 	}
@@ -169,15 +230,22 @@ public class PdxExplorers extends JavaPlugin {
 	@SuppressWarnings("unchecked")
 	private void loadExplorers() {
 
-		Map<String, String> inputMap = (Map<String, String>)explorersYml.load();
+		explorers = Collections.synchronizedMap(new HashMap<String, PlayerProgress>());
+
+		Map<String, Object> inputMap = (Map<String, Object>)explorersYml.load();
 
 		if (inputMap == null) {
-			inputMap = new HashMap<String,String>();
 			getLogger().warning("Using empty explorers list");
-
+		} else {
+			for (Entry<String,Object> e : inputMap.entrySet()) {
+				Object v = e.getValue();
+				if (v instanceof String) {
+					explorers.put(e.getKey(), new PlayerProgress((String) v));
+				} else if (v instanceof Map<?,?>) {
+					explorers.put(e.getKey(), new  PlayerProgress((Map<String,Object>)v));
+				}
+			}
 		}
-
-		explorers = Collections.synchronizedMap(inputMap);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -197,7 +265,7 @@ public class PdxExplorers extends JavaPlugin {
 	private void loadState() {
 		loadSigns();
 		loadExplorers();
-		loadExplorations();
+		loadRoutes();
 	}
 
 	private static Object[] locationToArray(Location location) {
@@ -208,70 +276,75 @@ public class PdxExplorers extends JavaPlugin {
 	public boolean onCommand(CommandSender sender, Command command,
 			String label, String[] args) {
 
-		if (command.getName().equalsIgnoreCase(EXPLORERS_COMMAND)) {
-			switch (args.length) {
-			case 0:
-				if (sender instanceof Player) {
-					final Player player = (Player) sender;
-					final String token = explorers.get(player.getName());
-					final String formattedToken =
-							token == null
-							? ChatColor.RED + "None"
-							: ChatColor.GREEN + token;
-
-					sender.sendMessage(ChatColor.YELLOW + "Exploration: " + formattedToken);
-				} else {
-					sender.sendMessage(listExplorers());
-				}
-				break;
-			case 1:
-				if (sender.hasPermission("toggle")) {
-					Player player = getServer().getPlayer(args[0]);
-					if (player == null) {
-						sender.sendMessage(ChatColor.RED + "No such player");
-					} else {
-						String name = player.getName();
-						if (explorers.containsKey(name)) {
-							explorers.remove(name);
-							sender.sendMessage(ChatColor.YELLOW + name
-									+ " is no longer an explorer.");
-						} else {
-							sender.sendMessage(ChatColor.YELLOW + name
-									+ " is not an explorer.");
-						}
-					}
-				} else {
-					sender.sendMessage(ChatColor.RED
-							+ "Explorer status change denied.");
-				}
-				break;
-			case 2:
-				if (sender.hasPermission("toggle")) {
-					Player player = getServer().getPlayer(args[0]);
-					if (player == null) {
-						sender.sendMessage(ChatColor.RED + "No such player");
-					} else {
-						String name = player.getName();
-						explorers.put(name, args[1]);
-						sender.sendMessage(ChatColor.YELLOW + name
-								+ " is now exploring " + args[1] + ".");
-					}
-				} else {
-					sender.sendMessage(ChatColor.RED
-							+ "Explorer status change denied.");
-				}
-				break;
-			default:
-				sender.sendMessage(ChatColor.RED + "Usage: /explorers");
-				break;
-			}
-			return true;
+		final Player player;
+		if (sender instanceof Player) {
+			player = (Player)sender;
 		} else {
-			return false;
+			player = null;
 		}
+		
+		if (command.getName().equalsIgnoreCase(EXPLORERS_COMMAND)) {
+			if (args.length == 0 && player != null) {
+				final String name = player.getName();
+				final PlayerProgress progress = explorers.get(name);
+				final String formattedToken = progress == null ? ChatColor.RED
+						+ "None" : progress.toChatString();
 
+				sender.sendMessage(ChatColor.YELLOW + "Exploration: "
+						+ formattedToken);
+				return true;
+			} else if (args.length == 1 && args[0].equalsIgnoreCase("players")) {
+				sender.sendMessage(listExplorers());
+				return true;
+			} else if (args.length == 1 && args[0].equalsIgnoreCase("routes")) {
+				sender.sendMessage(routesList());
+				return true;
+			} else if (args.length == 3 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("show")) {
+				Route r = routes.get(args[2]);
+				if (r == null) {
+					sender.sendMessage(ChatColor.RED + "No such route");
+				} else {
+					sender.sendMessage(r.toChatString());
+				}
+				return true;
+			} else if (args.length == 3 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("delete")) {
+				synchronized (routes) {
+					Route r = routes.get(args[2]);
+					if (r == null) {
+						sender.sendMessage(ChatColor.RED + "No such route");
+					} else {
+						if (player == null || r.isOwner(player.getName()) || player.hasPermission("explorers.delete")) {
+							routes.remove(args[2]);
+							sender.sendMessage(ChatColor.RED + "Success.");
+						} else {
+							sender.sendMessage(ChatColor.RED + "Permission denied.");
+						}
+					}	
+				}
+				
+				return true;
+			} else if (args.length == 1 && args[0].equalsIgnoreCase("version")) {
+				sender.sendMessage(getDescription().getVersion());
+				return true;
+			}
+		}
+		return false;	
 	}
 
+	private String routesList() {
+		StringBuilder builder = new StringBuilder();
+		boolean first = true;
+		builder.append("Routes: ");
+		
+		for (String token : routes.keySet()) {
+			if (!first) builder.append(ChatColor.GRAY + ", ");
+			first = false;
+			builder.append(ChatColor.YELLOW + token);
+		}
+		
+		return builder.toString();
+	}
+	
 	@Override
 	public void onDisable() {
 		saveState();
@@ -328,16 +401,23 @@ public class PdxExplorers extends JavaPlugin {
 	}
 
 	private void saveExplorations() throws IOException {
-		final Map<String, Object[]> output = new HashMap<String, Object[]>();
-		synchronized (explorations) {
-			for (Entry<String, Set<String>> e : explorations.entrySet()) {
-				output.put(e.getKey(), e.getValue().toArray());
+		final Map<String, Object> output = new HashMap<String, Object>();
+		
+		synchronized (routes) {
+			for (Entry<String, Route> e : routes.entrySet()) {
+				output.put(e.getKey(), e.getValue().toMap());
 			}
 		}
 		explorationsYml.save(output);
 	}
 	private void saveExplorers() throws IOException {
-		explorersYml.save(explorers);
+		final Map<String, Object> output = new HashMap<String, Object>();
+		synchronized (explorers) {
+			for (Entry<String, PlayerProgress> e : explorers.entrySet()) {
+				output.put(e.getKey(), e.getValue().toMap());
+			}
+		}
+		explorersYml.save(output);
 	}
 
 	private void saveSigns() throws IOException {
@@ -379,10 +459,28 @@ public class PdxExplorers extends JavaPlugin {
 	public void activateSign(final Player player, final String signType, final String token) {
 		if (signType.equalsIgnoreCase(START_SIGN_COMMAND)) {
 			activateStartSign(player, token);
-		} else if (signType.equalsIgnoreCase(FINISH_SIGN_COMMAND)) {
-			activateFinishSign(player, token);
+		} else if (parseFinish(signType) != null) {
+			activateFinishSign(player, token, parseFinish(signType));
 		} else if (signType.equalsIgnoreCase(VIEW_SIGN_COMMAND)) {
 			activateViewSign(player, token);
+		} else if (parseWaypoint(signType) != null) {
+			int w = parseWaypoint(signType);
+			activateWaypointSign(player, token, w);
+		}
+	}
+
+	private void activateWaypointSign(Player player, String token, int w) {
+		PlayerProgress progress = explorers.get(player.getName());
+		
+		if (progress == null) {
+			player.sendMessage(NOT_STARTED_MSG);
+		} else {
+			if (progress.getWaypoints() + 1 == w) {
+				progress.setWaypoints(w);
+				player.sendMessage(ChatColor.YELLOW + "Progress recorded!");
+			} else {
+				player.sendMessage(ChatColor.RED + "You need waypoint " + (progress.getWaypoints()+1));
+			}
 		}
 	}
 
@@ -390,23 +488,29 @@ public class PdxExplorers extends JavaPlugin {
 		player.sendMessage(explorationList(token));
 	}
 
-	private void activateFinishSign(final Player player, final String token) {
+	private void activateFinishSign(final Player player, final String token, final int w) {
 		final String name = player.getName();
-		final String playersToken = explorers.get(name);
+		final PlayerProgress progress = explorers.get(name);
+
 		String message;
 		boolean broadcast = false;
 
-		if (playersToken == null) {
+		if (progress == null) {
 			message = NOT_STARTED_MSG;
-		} else if (playersToken.equalsIgnoreCase(token)) {
-			broadcast = true;
-			message = String.format(SUCCESS_MSG, name, token);
-			explorers.remove(name);
+		} else if (progress.getToken().equalsIgnoreCase(token)) {
+			
+			if (progress.getWaypoints() + 1 == w) {
+				broadcast = true;
+				message = String.format(SUCCESS_MSG, name, token);
+				explorers.remove(name);
 
-			addPlayerToExploration(name, token);
-			saveState();
+				addPlayerToExploration(name, token);
+				saveState();
+			} else {
+				message = ChatColor.RED + "You need waypoint " + (progress.getWaypoints()+1);
+			}
 		} else {
-			message = String.format(BAD_FINISH_MSG, token, playersToken);
+			message = String.format(BAD_FINISH_MSG, token, progress.getToken());
 		}
 
 		if (broadcast) {
@@ -421,9 +525,9 @@ public class PdxExplorers extends JavaPlugin {
 		final String name = player.getName();
 
 		synchronized (explorers) {
-			final String currentToken = explorers.get(name);
+			final PlayerProgress currentToken = explorers.get(name);
 
-			if (currentToken != null && currentToken.equalsIgnoreCase(token)) {
+			if (currentToken != null && currentToken.getToken().equalsIgnoreCase(token)) {
 				message = ALREADY_EXPLORING_MSG;
 			} else {
 				if (currentToken == null) {
@@ -432,7 +536,7 @@ public class PdxExplorers extends JavaPlugin {
 					message = ChatColor.YELLOW + "You have switched to exploring " + ChatColor.GREEN + token
 							+ ChatColor.YELLOW + "!";;
 				}
-				explorers.put(name, token);
+				explorers.put(name, new PlayerProgress(token));
 			}
 		}
 
@@ -460,12 +564,13 @@ public class PdxExplorers extends JavaPlugin {
 
 					if (isExplorerSign(sign.getLines())) {
 						String token = sign.getLine(2);
-						Set<String> players = explorations.get(token);
+						final Route route = routes.get(token);
 
-						if (players != null) {
-							Object[] playerArray = players.toArray();
-							final int offset = counter % playerArray.length;
-							String nextName = (String) playerArray[offset];
+						if (route != null) {
+							String nextName = route.pickWinner(counter);
+							if (nextName == null) {
+								nextName = "oops";
+							}
 							sign.setLine(3, nextName);
 							sign.update();
 						}
