@@ -113,4 +113,32 @@ public class Route {
 			}
 		}
 	}
+
+	/**
+	 * 
+	 * @return Formatted list of players who have completed the route.
+	 */
+	public String toWinnersString() {
+		if (winners.isEmpty()) {
+			return ChatColor.RED + "None";
+		} else {
+			boolean first = true;
+			StringBuilder builder = new StringBuilder();
+
+			for (String p : winners) {
+				if (!first) {
+					builder.append(ChatColor.GRAY + ", ");
+				} else {
+					first = false;
+				}
+
+				builder.append(ChatColor.RESET + p);
+			}
+			return builder.toString();
+		}
+	}
+
+	public void removeWinner(String playerName) {
+		winners.remove(playerName);
+	}
 }

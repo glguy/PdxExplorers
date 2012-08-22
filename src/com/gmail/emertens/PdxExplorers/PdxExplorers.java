@@ -44,10 +44,7 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String EXPLORERS_DATA_FILE = "explorers.yml";
 	private static final String EXPLORATIONS_DATA_FILE = "explorations.yml";
 
-	private static final String SIGN_HEADER = "[explorer]";
-	private static final String START_SIGN_COMMAND = "start";
-	private static final String VIEW_SIGN_COMMAND = "view";
-	private static final String FINISH_SIGN_COMMAND = "finish";
+	
 	private static final String EXPLORERS_COMMAND = "explorers";
 	private static final String EXPLORATION_FAILURE_MSG = ChatColor.RED + "Exploration failed.";
 	private static final String EXPLORATION_STARTED_MSG = ChatColor.YELLOW + "You have started exploring " + ChatColor.GREEN + "%s"
@@ -86,7 +83,7 @@ public class PdxExplorers extends JavaPlugin {
 		final String name = player.getName();
 
 		Route r = getOrCreateRoute(token, name);
-		if (r.isOwner(name) || player.hasPermission(PdxExplorers.createPermission)) {
+		if (!(r.isOwner(name) || player.hasPermission(PdxExplorers.createPermission))) {
 			throw new ExplorersPermissionException();
 		}
 		
@@ -94,29 +91,10 @@ public class PdxExplorers extends JavaPlugin {
 		saveState();
 	}
 
-	private String explorationList(String token) {
-		Route route = routes.get(token);
+	private String explorationList(String token) throws ExplorersException {
+		Route route = getExistingRoute(token);
 
-		if (route.hasWinners()) {
-
-			StringBuilder builder = new StringBuilder();
-
-			builder.append(ChatColor.GREEN);
-			builder.append(token);
-			builder.append(ChatColor.GRAY);
-			builder.append(": ");
-
-			boolean first = true;
-			for (String player : route.getWinners()) {
-				if (!first)
-					builder.append(ChatColor.GRAY + ", ");
-				builder.append(ChatColor.RESET + player);
-				first = false;
-			}
-			return builder.toString();
-		} else {
-			return ChatColor.YELLOW + "No one has finished this exploration.";
-		}
+		return ChatColor.GREEN + token + ChatColor.GRAY + ": " + route.toWinnersString();
 	}
 
 	/**
@@ -124,39 +102,8 @@ public class PdxExplorers extends JavaPlugin {
 	 * @param sign An array of 4 signs on a sign
 	 * @return True if these lines form a valid command sign
 	 */
-	public static boolean isExplorerSign(final String[] sign) {
-		return sign[0].equalsIgnoreCase(SIGN_HEADER)
-			&& (sign[1].equalsIgnoreCase(START_SIGN_COMMAND) ||
-				parseFinish(sign[1]) != null ||
-				parseWaypoint(sign[1]) != null ||
-				sign[1].equalsIgnoreCase(VIEW_SIGN_COMMAND))
-			&& !sign[2].isEmpty();
-	}
-
-	public static Integer parseWaypoint(String str) {
-		if (str.startsWith("Waypoint: ")) {
-			try {
-			return Integer.parseInt(str.substring(10), 10);
-			} catch (NumberFormatException e) {
-				return null;
-			}
-		} else {
-			return null;
-		}
-	}
-
-	public static Integer parseFinish(String str) {
-		if (str.equalsIgnoreCase(FINISH_SIGN_COMMAND)) {
-			return 1;
-		} else if (str.toLowerCase().startsWith(FINISH_SIGN_COMMAND + ": ")){
-			try {
-				return Integer.parseInt(str.substring(FINISH_SIGN_COMMAND.length() + 2), 10);
-			} catch (NumberFormatException e) {
-				return null;
-			}
-		} else {
-			return null;
-		}
+	public static boolean isExplorerSign(final String[] lines) {
+		return CommandSign.makeCommandSign(lines) != null;
 	}
 
 	private String listExplorers() {
@@ -291,6 +238,10 @@ public class PdxExplorers extends JavaPlugin {
 				addRewardsCommand(sender, args[2], args[3], args[4]);
 			} else if (args.length == 3 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("delete")) {
 				deleteRouteCommand(sender, player, args[2]);
+			} else if (args.length == 4 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("revoke")) {
+				revokeRouteCommand(sender, player, args[2], args[3]);
+			} else if (args.length == 3 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("winners")) {
+				listRouteWinnersCommand(sender, args[2]);
 			} else if (args.length == 1 && args[0].equalsIgnoreCase("version")) {
 				sender.sendMessage(getDescription().getVersion());
 			}
@@ -305,19 +256,33 @@ public class PdxExplorers extends JavaPlugin {
 		return false;
 	}
 
+	private void revokeRouteCommand(CommandSender sender, Player player,
+			String routeName, String playerName) throws ExplorersException {
+		Route r = getExistingRoute(routeName);
+		if ((player != null && r.isOwner(player.getName()))
+				|| sender.hasPermission("explorers.revoke")) {
+			r.removeWinner(playerName);
+		}
+		
+	}
+
+	private void listRouteWinnersCommand(CommandSender sender, String routeName) throws ExplorersException {
+		Route r = getExistingRoute(routeName);
+		sender.sendMessage(r.toWinnersString());
+	}
+
 	private void deleteRouteCommand(CommandSender sender, final Player player,
 			String routeName) throws ExplorersException {
 		synchronized (routes) {
 			Route r = getExistingRoute(routeName);
 			
-			if (player == null || r.isOwner(player.getName())
-					|| player.hasPermission("explorers.delete")) {
-				routes.remove(routeName);
-				sender.sendMessage(ChatColor.RED + "Success");
-			} else {
+			if (!(player != null && r.isOwner(player.getName()))
+					&& !sender.hasPermission("explorers.delete")) {
 				throw new ExplorersPermissionException();
 			}
-
+			routes.remove(routeName);
+			sender.sendMessage(ChatColor.GREEN + "Success");
+			
 		}
 	}
 	
@@ -336,7 +301,7 @@ public class PdxExplorers extends JavaPlugin {
 			}
 			return r;
 		}
-}
+	}
 
 	private void addRewardsCommand(CommandSender sender, String route, String materialString, String amountString)
 	throws NumberFormatException, ExplorersException {
@@ -356,7 +321,7 @@ public class PdxExplorers extends JavaPlugin {
 		amount = Integer.parseInt(amountString, 10);
 
 		r.addReward(material, amount);
-		sender.sendMessage(ChatColor.RED + "Reward updated");
+		sender.sendMessage(ChatColor.GREEN + "Reward updated");
 	}
 
 	private String routesList() {
@@ -483,17 +448,22 @@ public class PdxExplorers extends JavaPlugin {
 	 * @param player The player who activated the sign
 	 * @param signType The command string on the sign
 	 * @param token The route token on the sign
+	 * @throws ExplorersException 
 	 */
-	public void activateSign(final Player player, final String signType, final String token) {
-		if (signType.equalsIgnoreCase(START_SIGN_COMMAND)) {
-			activateStartSign(player, token);
-		} else if (parseFinish(signType) != null) {
-			activateFinishSign(player, token, parseFinish(signType));
-		} else if (signType.equalsIgnoreCase(VIEW_SIGN_COMMAND)) {
-			activateViewSign(player, token);
-		} else if (parseWaypoint(signType) != null) {
-			int w = parseWaypoint(signType);
-			activateWaypointSign(player, token, w);
+	public void activateSign(final Player player, final CommandSign sign) throws ExplorersException {
+		switch (sign.getSignType()) {
+		case FINISH_SIGN:
+			activateFinishSign(player, sign.getRouteName(), sign.getWaypoint());
+			break;
+		case START_SIGN:
+			activateStartSign(player, sign.getRouteName());
+			break;
+		case VIEW_SIGN:
+			activateViewSign(player, sign.getRouteName());
+			break;
+		case WAYPOINTS_SIGN:
+			activateWaypointSign(player, sign.getRouteName(), sign.getWaypoint());
+			break;
 		}
 	}
 
@@ -502,17 +472,19 @@ public class PdxExplorers extends JavaPlugin {
 
 		if (progress == null) {
 			player.sendMessage(NOT_STARTED_MSG);
+		} else if (!progress.getToken().equalsIgnoreCase(token)) {
+			player.sendMessage(String.format(BAD_FINISH_MSG, token, progress.getToken()));
 		} else {
 			if (progress.getWaypoints() + 1 == w) {
 				progress.setWaypoints(w);
-				player.sendMessage(ChatColor.YELLOW + "Progress recorded!");
+				player.sendMessage(ChatColor.GREEN + "Progress recorded!");
 			} else {
 				player.sendMessage(ChatColor.RED + "You need waypoint " + (progress.getWaypoints()+1));
 			}
 		}
 	}
 
-	private void activateViewSign(final Player player, final String token) {
+	private void activateViewSign(final Player player, final String token) throws ExplorersException {
 		player.sendMessage(explorationList(token));
 	}
 
@@ -608,7 +580,7 @@ public class PdxExplorers extends JavaPlugin {
 						if (route != null) {
 							String nextName = route.pickWinner(counter);
 							if (nextName == null) {
-								nextName = "oops";
+								nextName = ChatColor.ITALIC + "No one";
 							}
 							sign.setLine(3, nextName);
 							sign.update();
