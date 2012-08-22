@@ -1,6 +1,7 @@
 package com.gmail.emertens.PdxExplorers;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Player;
@@ -25,9 +26,14 @@ public class PlayerListener implements Listener {
 	}
 
 	@EventHandler(ignoreCancelled = true)
-	public void onTeleport(PlayerTeleportEvent event) {
-		if (event.getCause() != TeleportCause.UNKNOWN) {
-			plugin.playerTeleported(event.getPlayer());
+	public void onBlockPlace(BlockPlaceEvent event) {
+		Block block = event.getBlockAgainst();
+		BlockState state = block.getState();
+		if (state instanceof Sign) {
+			Sign sign = (Sign)state;
+			if (PdxExplorers.isExplorerSign(sign.getLines())) {
+				event.setCancelled(true);
+			}
 		}
 	}
 
@@ -69,12 +75,12 @@ public class PlayerListener implements Listener {
 	@EventHandler(ignoreCancelled = true)
 	public void onSignChange(SignChangeEvent event) {
 		final Player player = event.getPlayer();
-
+		final String[] lines = event.getLines();
 		try {
-			if (PdxExplorers.isExplorerSign(event.getLines())) {
-				plugin.addExplorationSign(event.getLines(), player, event
-						.getBlock().getLocation());
-				player.sendMessage(ChatColor.RED + "Explorer sign created.");
+			CommandSign sign = CommandSign.makeCommandSign(lines);
+			if (sign != null) {
+				final Location signLocation = event.getBlock().getLocation();
+				plugin.addExplorationSign(player, sign, signLocation);
 			}
 		} catch (ExplorersException e) {
 			player.sendMessage(ChatColor.RED + e.getMessage());
@@ -83,14 +89,9 @@ public class PlayerListener implements Listener {
 	}
 
 	@EventHandler(ignoreCancelled = true)
-	public void onBlockPlace(BlockPlaceEvent event) {
-		Block block = event.getBlockAgainst();
-		BlockState state = block.getState();
-		if (state instanceof Sign) {
-			Sign sign = (Sign)state;
-			if (PdxExplorers.isExplorerSign(sign.getLines())) {
-				event.setCancelled(true);
-			}
+	public void onTeleport(PlayerTeleportEvent event) {
+		if (event.getCause() != TeleportCause.UNKNOWN) {
+			plugin.playerTeleported(event.getPlayer());
 		}
 	}
 }

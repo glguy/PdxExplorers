@@ -141,4 +141,8 @@ public class Route {
 	public void removeWinner(String playerName) {
 		winners.remove(playerName);
 	}
+
+	public void setOwner(String name) {
+		owner = name;
+	}
 }

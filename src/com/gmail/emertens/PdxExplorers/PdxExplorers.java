@@ -78,8 +78,8 @@ public class PdxExplorers extends JavaPlugin {
 		saveState();
 	}
 
-	public void addExplorationSign(String[] strings, Player player, Location location) throws ExplorersException {
-		final String token = strings[2];
+	public void addExplorationSign(Player player, CommandSign sign, Location location) throws ExplorersException {
+		final String token = sign.getRouteName();
 		final String name = player.getName();
 
 		Route r = getOrCreateRoute(token, name);
@@ -88,6 +88,7 @@ public class PdxExplorers extends JavaPlugin {
 		}
 		
 		signs.add(locationToArray(location));
+		player.sendMessage(ChatColor.GREEN + "Explorer sign created.");
 		saveState();
 	}
 
@@ -108,27 +109,28 @@ public class PdxExplorers extends JavaPlugin {
 
 	private String listExplorers() {
 		StringBuilder builder = new StringBuilder();
-		if (explorers.isEmpty()) {
-			builder.append(ChatColor.ITALIC + "None");
-		} else {
-			boolean first = true;
+		boolean first = true;
 
-			for (Entry<String, PlayerProgress> entry : explorers.entrySet()) {
-				String name = entry.getKey();
-				Player player = getServer().getPlayerExact(name);
-				if (player != null) {
-					if (!first) {
-						builder.append(ChatColor.GRAY + ", ");
-					}
-
-					builder.append(ChatColor.RESET
-							+ player.getDisplayName()
-							+ ChatColor.GRAY + ": "
-							+ entry.getValue().toChatString());
-					first = false;
+		for (Entry<String, PlayerProgress> entry : explorers.entrySet()) {
+			String name = entry.getKey();
+			Player player = getServer().getPlayerExact(name);
+			if (player != null) {
+				if (!first) {
+					builder.append(ChatColor.GRAY + ", ");
 				}
+
+				builder.append(ChatColor.RESET + player.getDisplayName()
+						+ ChatColor.GRAY + ": "
+						+ entry.getValue().toChatString());
+				first = false;
 			}
 		}
+
+		// After iterating through all the players it is possible that none were online
+		if (first) {
+			builder.append(ChatColor.ITALIC + "None");
+		}
+
 		return ChatColor.YELLOW + "Explorers: " + ChatColor.WHITE + builder;
 	}
 
@@ -144,14 +146,9 @@ public class PdxExplorers extends JavaPlugin {
 		if (inputMap != null) {
 			for (Entry<String, Object> e : inputMap.entrySet()) {
 				Object v = e.getValue();
-				if (v instanceof Map<?,?>) {
-					routes.put(e.getKey(), new Route((Map<String,Object>)v));
-				} else if (v instanceof ArrayList<?>) {
-					Route r = new Route();
-					for (Object s : (ArrayList<Object>) e.getValue()) {
-						r.addWinner((String)s);
-					}
-					routes.put(e.getKey(), r);
+				String routeName = e.getKey().trim();
+				if ((v instanceof Map<?,?>) && !routeName.isEmpty()) {
+					routes.put(routeName, new Route((Map<String,Object>)v));
 				}
 			}
 		}
@@ -169,11 +166,7 @@ public class PdxExplorers extends JavaPlugin {
 		} else {
 			for (Entry<String,Object> e : inputMap.entrySet()) {
 				Object v = e.getValue();
-				if (v instanceof String) {
-					explorers.put(e.getKey(), new PlayerProgress((String) v));
-				} else if (v instanceof Map<?,?>) {
-					explorers.put(e.getKey(), new  PlayerProgress((Map<String,Object>)v));
-				}
+				explorers.put(e.getKey(), new  PlayerProgress((Map<String,Object>)v));
 			}
 		}
 	}
@@ -199,7 +192,9 @@ public class PdxExplorers extends JavaPlugin {
 	}
 
 	private static Object[] locationToArray(Location location) {
-		return new Object[] {location.getWorld().getName(), location.getBlockX(), location.getBlockY(), location.getBlockZ()};
+		return new Object[] { location.getWorld().getName(),
+				location.getBlockX(), location.getBlockY(),
+				location.getBlockZ() };
 	}
 
 	@Override
@@ -208,43 +203,72 @@ public class PdxExplorers extends JavaPlugin {
 
 		final Player player;
 		if (sender instanceof Player) {
-			player = (Player)sender;
+			player = (Player) sender;
 		} else {
 			player = null;
 		}
 
 		if (command.getName().equalsIgnoreCase(EXPLORERS_COMMAND)) {
 			try {
-			if (args.length == 0 && player != null) {
-				final String name = player.getName();
-				final PlayerProgress progress = explorers.get(name);
-				final String formattedToken = progress == null ? ChatColor.RED
-						+ "None" : progress.toChatString();
+				if (args.length == 0 && player != null) {
+					final String name = player.getName();
+					final PlayerProgress progress = explorers.get(name);
+					final String formattedToken = progress == null ? ChatColor.RED
+							+ "None"
+							: progress.toChatString();
 
-				sender.sendMessage(ChatColor.YELLOW + "Exploration: "
-						+ formattedToken);
-			} else if (args.length == 1 && args[0].equalsIgnoreCase("players")) {
-				sender.sendMessage(listExplorers());
-			} else if (args.length == 1 && args[0].equalsIgnoreCase("routes")) {
-				sender.sendMessage(routesList());
-			} else if (args.length == 3 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("show")) {
-				Route r = routes.get(args[2]);
-				if (r == null) {
-					sender.sendMessage(ChatColor.RED + "No such route");
-				} else {
-					sender.sendMessage(r.toChatString());
+					sender.sendMessage(ChatColor.YELLOW + "Exploration: "
+							+ formattedToken);
+				} else if (args.length == 1
+						&& args[0].equalsIgnoreCase("players")) {
+					sender.sendMessage(listExplorers());
+				} else if (args.length == 1
+						&& args[0].equalsIgnoreCase("routes")) {
+					sender.sendMessage(routesList());
+				} else if (args.length == 3
+						&& args[0].equalsIgnoreCase("route")
+						&& args[1].equalsIgnoreCase("show")) {
+					Route r = routes.get(args[2]);
+					if (r == null) {
+						sender.sendMessage(ChatColor.RED + "No such route");
+					} else {
+						sender.sendMessage(r.toChatString());
+					}
+				} else if (args.length == 5
+						&& args[0].equalsIgnoreCase("route")
+						&& args[1].equalsIgnoreCase("addreward")) {
+					addRewardsCommand(sender, args[2], args[3], args[4]);
+				} else if (args.length == 3
+						&& args[0].equalsIgnoreCase("route")
+						&& args[1].equalsIgnoreCase("delete")) {
+					deleteRouteCommand(sender, player, args[2]);
+				} else if (args.length == 4
+						&& args[0].equalsIgnoreCase("route")
+						&& args[1].equalsIgnoreCase("revoke")) {
+					revokeRouteCommand(sender, player, args[2], args[3]);
+				} else if (args.length == 3
+						&& args[0].equalsIgnoreCase("route")
+						&& args[1].equalsIgnoreCase("winners")) {
+					listRouteWinnersCommand(sender, args[2]);
+				} else if (args.length == 4
+						&& args[0].equalsIgnoreCase("route")
+						&& args[1].equalsIgnoreCase("give")) {
+					routeGiveCommand(sender, player, args[2], args[3]);
+				} else if (args.length == 1
+						&& args[0].equalsIgnoreCase("version")) {
+					sender.sendMessage(getDescription().getVersion());
+					
+				// This has nothing to do with exploration
+				} else if (player != null && args.length == 1
+						&& args[0].equalsIgnoreCase("fly")) {
+					player.sendMessage("Fly speed: " + player.getFlySpeed());
+				} else if (player != null && args.length == 2
+						&& args[0].equalsIgnoreCase("fly")
+						&& player.hasPermission("explorers.setfly")) {
+					Float speed = Float.parseFloat(args[1]);
+					player.setFlySpeed(speed);
+					player.sendMessage("Done");
 				}
-			} else if (args.length == 5 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("addreward")) {
-				addRewardsCommand(sender, args[2], args[3], args[4]);
-			} else if (args.length == 3 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("delete")) {
-				deleteRouteCommand(sender, player, args[2]);
-			} else if (args.length == 4 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("revoke")) {
-				revokeRouteCommand(sender, player, args[2], args[3]);
-			} else if (args.length == 3 && args[0].equalsIgnoreCase("route") && args[1].equalsIgnoreCase("winners")) {
-				listRouteWinnersCommand(sender, args[2]);
-			} else if (args.length == 1 && args[0].equalsIgnoreCase("version")) {
-				sender.sendMessage(getDescription().getVersion());
-			}
 			} catch (ExplorersException e) {
 				sender.sendMessage(ChatColor.RED + e.getMessage());
 			} catch (NumberFormatException e) {
@@ -254,6 +278,25 @@ public class PdxExplorers extends JavaPlugin {
 			return true;
 		}
 		return false;
+	}
+
+	private void routeGiveCommand(CommandSender sender, Player player,
+			String routeName, String targetName) throws ExplorersException {
+		
+		Route r = getExistingRoute(routeName);
+		
+		Player targetPlayer = getServer().getPlayer(targetName);
+		if (targetPlayer == null) {
+			sender.sendMessage(ChatColor.RED + "No such player.");
+			return;
+		}
+		
+		if (! ((player != null && r.isOwner(player.getName())) || sender.hasPermission("explorers.give"))) {
+			throw new ExplorersPermissionException();
+		}
+		
+		r.setOwner(targetPlayer.getName());
+		sender.sendMessage(ChatColor.GREEN + "Gave " + routeName + " to " + targetPlayer.getName());
 	}
 
 	private void revokeRouteCommand(CommandSender sender, Player player,

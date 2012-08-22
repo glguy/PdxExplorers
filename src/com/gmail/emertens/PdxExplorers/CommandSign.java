@@ -16,6 +16,7 @@ public class CommandSign {
 	public static CommandSign makeCommandSign(String[] lines) {
 		if (lines.length != 4) return null;
 		if (!lines[0].equalsIgnoreCase(SIGN_HEADER)) return null;
+		if (lines[2].isEmpty()) return null;
 		
 		int offset = lines[1].indexOf(": ");
 		int w;
@@ -23,7 +24,11 @@ public class CommandSign {
 		
 		if (offset >= 0) {
 			cmd = lines[1].substring(0, offset);
-			w = Integer.parseInt(lines[1].substring(offset+2), 10);
+			try {
+				w = Integer.parseInt(lines[1].substring(offset+2), 10);
+			} catch (NumberFormatException e) {
+				return null;
+			}
 		} else {
 			cmd = lines[1];
 			w = 1;
