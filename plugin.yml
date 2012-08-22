@@ -16,8 +16,8 @@ permissions:
     - explorers.create
     - explorers.toggle
   explorers.create:
-    description: Create explorer start signs
+    description: Create explorer signs regardless of ownership
     default: op
-  explorers.toggle:
-    description: Toggle explorer status
+  explorers.delete:
+    description: Delete routes
     default: op

@@ -57,14 +57,17 @@ public class PlayerListener implements Listener {
 
 	@EventHandler(ignoreCancelled = true)
 	public void onSignChange(SignChangeEvent event) {
-		if (PdxExplorers.isExplorerSign(event.getLines())) {
-			Player player = event.getPlayer();
-			if (plugin.addExplorationSign(event.getLines(), player, event.getBlock().getLocation())) {
+		final Player player = event.getPlayer();
+
+		try {
+			if (PdxExplorers.isExplorerSign(event.getLines())) {
+				plugin.addExplorationSign(event.getLines(), player, event
+						.getBlock().getLocation());
 				player.sendMessage(ChatColor.RED + "Explorer sign created.");
-			} else {
-				event.setCancelled(true);
-				player.sendMessage(ChatColor.RED + "Explorer sign creation is restricted.");
 			}
+		} catch (ExplorersException e) {
+			player.sendMessage(ChatColor.RED + e.getMessage());
+			event.setCancelled(true);
 		}
 	}
 
