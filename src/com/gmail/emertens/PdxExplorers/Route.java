@@ -6,9 +6,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 public class Route {
 	private String owner;
@@ -71,8 +74,17 @@ public class Route {
 		return !winners.isEmpty();
 	}
 
-	public void addWinner(String s) {
-		winners.add(s);
+	public void addWinner(final Player p) {
+		// Record winner's name
+		winners.add(p.getName());
+		
+		// Issue reward items
+		for (Entry<Material, Integer> e : getRewards().entrySet()) {
+			ItemStack stack = new ItemStack(e.getKey(), e.getValue());
+			p.getInventory().addItem(stack);
+			p.sendMessage("Exploration reward given: " + e.getValue() + " "
+					+ e.getKey());
+		}
 	}
 
 	public String pickWinner(int i) {

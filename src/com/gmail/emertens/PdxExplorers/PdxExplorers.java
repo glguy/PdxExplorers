@@ -20,7 +20,6 @@ import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class PdxExplorers extends JavaPlugin {
@@ -71,10 +70,10 @@ public class PdxExplorers extends JavaPlugin {
 	 * @param name Player's name
 	 * @param token Exploration's token
 	 */
-	private void addPlayerToExploration(String name, String token) {
+	private void addPlayerToExploration(final Player player, String token) {
 
 		Route route = getOrCreateRoute(token, null);
-		route.addWinner(name);
+		route.addWinner(player);
 		saveState();
 	}
 
@@ -423,6 +422,10 @@ public class PdxExplorers extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * This method is called to update the game state when a player teleports.
+	 * @param player Account name of the player who teleported.
+	 */
 	public void playerTeleported(Player player) {
 		playerFailed(player);
 	}
@@ -538,8 +541,6 @@ public class PdxExplorers extends JavaPlugin {
 		final String message;
 		boolean broadcast = false;
 
-		Route r = getOrCreateRoute(token, null);
-
 		if (progress == null) {
 			message = NOT_STARTED_MSG;
 		} else if (progress.getToken().equalsIgnoreCase(token)) {
@@ -549,8 +550,7 @@ public class PdxExplorers extends JavaPlugin {
 				message = String.format(SUCCESS_MSG, name, token);
 
 				explorers.remove(name);
-				addPlayerToExploration(name, token);
-				issueRewards(player, r);
+				addPlayerToExploration(player, token);
 				saveState();
 			} else {
 				message = ChatColor.RED + "You need waypoint " + (progress.getWaypoints()+1);
@@ -563,14 +563,6 @@ public class PdxExplorers extends JavaPlugin {
 			getServer().broadcastMessage(message);
 		} else {
 			player.sendMessage(message);
-		}
-	}
-
-	private void issueRewards(final Player player, Route r) {
-		for (Entry<Material, Integer> e : r.getRewards().entrySet()) {
-			ItemStack stack = new ItemStack(e.getKey(), e.getValue());
-			player.getInventory().addItem(stack);
-			player.sendMessage("Exploration reward given: " + e.getValue() + " " + e.getKey());
 		}
 	}
 
