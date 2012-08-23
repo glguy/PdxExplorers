@@ -146,7 +146,7 @@ public class PdxExplorers extends JavaPlugin {
 		if (inputMap != null) {
 			for (Entry<String, Object> e : inputMap.entrySet()) {
 				Object v = e.getValue();
-				String routeName = e.getKey().trim();
+				String routeName = e.getKey().trim().replaceAll(" ", "");
 				if ((v instanceof Map<?,?>) && !routeName.isEmpty()) {
 					routes.put(routeName, new Route((Map<String,Object>)v));
 				}
@@ -170,6 +170,8 @@ public class PdxExplorers extends JavaPlugin {
 			}
 		}
 	}
+	
+	
 
 	@SuppressWarnings("unchecked")
 	private void loadSigns() {
@@ -228,12 +230,8 @@ public class PdxExplorers extends JavaPlugin {
 				} else if (args.length == 3
 						&& args[0].equalsIgnoreCase("route")
 						&& args[1].equalsIgnoreCase("show")) {
-					Route r = routes.get(args[2]);
-					if (r == null) {
-						sender.sendMessage(ChatColor.RED + "No such route");
-					} else {
-						sender.sendMessage(r.toChatString());
-					}
+					Route r = getExistingRoute(args[2]);
+					sender.sendMessage(r.toChatString());
 				} else if (args.length == 5
 						&& args[0].equalsIgnoreCase("route")
 						&& args[1].equalsIgnoreCase("addreward")) {
@@ -268,6 +266,8 @@ public class PdxExplorers extends JavaPlugin {
 					Float speed = Float.parseFloat(args[1]);
 					player.setFlySpeed(speed);
 					player.sendMessage("Done");
+				} else {
+					sender.sendMessage(ChatColor.RED + "Bad command");
 				}
 			} catch (ExplorersException e) {
 				sender.sendMessage(ChatColor.RED + e.getMessage());
@@ -330,14 +330,14 @@ public class PdxExplorers extends JavaPlugin {
 	}
 	
 	private Route getExistingRoute(String name) throws ExplorersException {
-		Route r = routes.get(name);
+		Route r = routes.get(name.replaceAll(" ", ""));
 		if (r == null) throw new ExplorersNoRouteException();
 		return r;
 	}
 	
 	private Route getOrCreateRoute(String name, String newOwner) {
 		synchronized (routes) {
-			Route r = routes.get(name);
+			Route r = routes.get(name.replaceAll(" ", ""));
 			if (r == null) {
 				r = new Route(newOwner);
 				routes.put(name, r);
@@ -618,7 +618,7 @@ public class PdxExplorers extends JavaPlugin {
 
 					if (isExplorerSign(sign.getLines())) {
 						String token = sign.getLine(2);
-						final Route route = routes.get(token);
+						final Route route = routes.get(token.replaceAll(" ", ""));
 
 						if (route != null) {
 							String nextName = route.pickWinner(counter);
