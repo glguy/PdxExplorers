@@ -62,8 +62,8 @@ public class Route {
 		return owner;
 	}
 
-	public boolean isOwner(final String name) {
-		return owner != null && owner.equalsIgnoreCase(name);
+	public boolean isOwner(final Player player) {
+		return player != null && owner.equalsIgnoreCase(player.getName());
 	}
 
 	public Iterable<String> getWinners() {

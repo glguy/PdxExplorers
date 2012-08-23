@@ -82,7 +82,7 @@ public class PdxExplorers extends JavaPlugin {
 		final String name = player.getName();
 
 		Route r = getOrCreateRoute(token, name);
-		if (!(r.isOwner(name) || player.hasPermission(PdxExplorers.createPermission))) {
+		if (!(r.isOwner(player) || player.hasPermission(PdxExplorers.createPermission))) {
 			throw new ExplorersPermissionException();
 		}
 		
@@ -290,7 +290,7 @@ public class PdxExplorers extends JavaPlugin {
 			return;
 		}
 		
-		if (! ((player != null && r.isOwner(player.getName())) || sender.hasPermission("explorers.give"))) {
+		if (! ((player != null && r.isOwner(player)) || sender.hasPermission("explorers.give"))) {
 			throw new ExplorersPermissionException();
 		}
 		
@@ -301,7 +301,7 @@ public class PdxExplorers extends JavaPlugin {
 	private void revokeRouteCommand(CommandSender sender, Player player,
 			String routeName, String playerName) throws ExplorersException {
 		Route r = getExistingRoute(routeName);
-		if ((player != null && r.isOwner(player.getName()))
+		if ((player != null && r.isOwner(player))
 				|| sender.hasPermission("explorers.revoke")) {
 			r.removeWinner(playerName);
 		}
@@ -318,7 +318,7 @@ public class PdxExplorers extends JavaPlugin {
 		synchronized (routes) {
 			Route r = getExistingRoute(routeName);
 			
-			if (!(player != null && r.isOwner(player.getName()))
+			if (!(player != null && r.isOwner(player))
 					&& !sender.hasPermission("explorers.delete")) {
 				throw new ExplorersPermissionException();
 			}
