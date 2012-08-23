@@ -207,60 +207,76 @@ public class PdxExplorers extends JavaPlugin {
 
 		if (command.getName().equalsIgnoreCase(EXPLORERS_COMMAND)) {
 			try {
-				if (args.length == 0 && player != null) {
-					final String name = player.getName();
-					final PlayerProgress progress = explorers.get(name);
-					final String formattedToken = progress == null ? ChatColor.RED
-							+ "None"
-							: progress.toChatString();
-
-					sender.sendMessage(ChatColor.YELLOW + "Exploration: "
-							+ formattedToken);
-				} else if (args.length == 1
-						&& args[0].equalsIgnoreCase("players")) {
+				if (args.length == 0) {
+					if (player == null) {
+						sender.sendMessage(ChatColor.RED + "Console has no exploration status.");
+					} else {
+						playerStatusCommand(sender, player);
+					}
+				} else if (args[0].equalsIgnoreCase("players")) {
 					sender.sendMessage(listExplorers());
-				} else if (args.length == 1
-						&& args[0].equalsIgnoreCase("routes")) {
+				} else if (args[0].equalsIgnoreCase("routes")) {
 					sender.sendMessage(routesList());
-				} else if (args.length == 3
-						&& args[0].equalsIgnoreCase("route")
-						&& args[1].equalsIgnoreCase("show")) {
-					Route r = getExistingRoute(args[2]);
-					sender.sendMessage(r.toChatString());
-				} else if (args.length == 5
-						&& args[0].equalsIgnoreCase("route")
-						&& args[1].equalsIgnoreCase("addreward")) {
-					addRewardsCommand(sender, args[2], args[3], args[4]);
-				} else if (args.length == 3
-						&& args[0].equalsIgnoreCase("route")
-						&& args[1].equalsIgnoreCase("delete")) {
-					deleteRouteCommand(sender, player, args[2]);
-				} else if (args.length == 4
-						&& args[0].equalsIgnoreCase("route")
-						&& args[1].equalsIgnoreCase("revoke")) {
-					revokeRouteCommand(sender, player, args[2], args[3]);
-				} else if (args.length == 3
-						&& args[0].equalsIgnoreCase("route")
-						&& args[1].equalsIgnoreCase("winners")) {
-					listRouteWinnersCommand(sender, args[2]);
-				} else if (args.length == 4
-						&& args[0].equalsIgnoreCase("route")
-						&& args[1].equalsIgnoreCase("give")) {
-					routeGiveCommand(sender, player, args[2], args[3]);
-				} else if (args.length == 1
-						&& args[0].equalsIgnoreCase("version")) {
+				} else if (args[0].equalsIgnoreCase("route")) {
+					if (args.length == 1) {
+						sender.sendMessage(ChatColor.RED + "Route requires additional command");
+					} else if (args[1].equalsIgnoreCase("show")) {
+						if (args.length == 3) {
+							Route r = getExistingRoute(args[2]);
+							sender.sendMessage(r.toChatString());
+						} else {
+							sender.sendMessage(ChatColor.RED + "/explorers route show ROUTE");
+						}
+					} else if (args[1].equalsIgnoreCase("addreward")) {
+						if (args.length == 5) {
+							addRewardsCommand(sender, args[2], args[3], args[4]);
+						} else {
+							sender.sendMessage(ChatColor.RED + "/explorers route addreward ROUTE MATERIAL QUANTITY");
+						}
+					} else if (args[1].equalsIgnoreCase("delete")) {
+						if (args.length == 3) {
+							deleteRouteCommand(sender, player, args[2]);
+						} else {
+							sender.sendMessage(ChatColor.RED + "/explorers route delete ROUTE");
+						}
+					} else if (args[1].equalsIgnoreCase("revoke")) {
+						if (args.length == 4) {
+							revokeRouteCommand(sender, player, args[2], args[3]);
+						} else {
+							sender.sendMessage(ChatColor.RED + "/explorers route revoke ROUTE PLAYER");
+						}
+					} else if (args[1].equalsIgnoreCase("winners")) {
+						if (args.length == 3) {
+							listRouteWinnersCommand(sender, args[2]);
+						} else {
+							sender.sendMessage(ChatColor.RED + "/explorers route winners ROUTE");
+						}
+					} else if (args[1].equalsIgnoreCase("give")) {
+						if (args.length == 4) {
+							routeGiveCommand(sender, player, args[2], args[3]);
+						} else {
+							sender.sendMessage(ChatColor.RED + "/explorers route give ROUTE PLAYER");
+						}
+					}
+				} else if (args[0].equalsIgnoreCase("version")) {
 					sender.sendMessage(getDescription().getVersion());
 					
 				// This has nothing to do with exploration
-				} else if (player != null && args.length == 1
-						&& args[0].equalsIgnoreCase("fly")) {
-					player.sendMessage("Fly speed: " + player.getFlySpeed());
-				} else if (player != null && args.length == 2
-						&& args[0].equalsIgnoreCase("fly")
-						&& player.hasPermission("explorers.setfly")) {
-					Float speed = Float.parseFloat(args[1]);
-					player.setFlySpeed(speed);
-					player.sendMessage("Done");
+				} else if (args[0].equalsIgnoreCase("fly")) {
+					if (player == null) {
+						sender.sendMessage(ChatColor.RED + "Console can not fly");
+					} else {
+						if (args.length == 1) {
+							player.sendMessage("Fly speed: " + player.getFlySpeed());
+						} else {
+							if (!player.hasPermission("explorers.setfly")) {
+								throw new ExplorersPermissionException();
+							}
+							Float speed = Float.parseFloat(args[1]);
+							player.setFlySpeed(speed);
+							player.sendMessage("Done");
+						}
+					}
 				} else {
 					sender.sendMessage(ChatColor.RED + "Bad command");
 				}
@@ -273,6 +289,17 @@ public class PdxExplorers extends JavaPlugin {
 			return true;
 		}
 		return false;
+	}
+
+	private void playerStatusCommand(CommandSender sender, final Player player) {
+		final String name = player.getName();
+		final PlayerProgress progress = explorers.get(name);
+		final String formattedToken = progress == null ? ChatColor.RED
+				+ "None"
+				: progress.toChatString();
+
+		sender.sendMessage(ChatColor.YELLOW + "Exploration: "
+				+ formattedToken);
 	}
 
 	private void routeGiveCommand(CommandSender sender, Player player,
