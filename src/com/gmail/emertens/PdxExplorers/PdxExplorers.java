@@ -93,7 +93,6 @@ public class PdxExplorers extends JavaPlugin {
 
 	private String explorationList(String token) throws ExplorersException {
 		Route route = getExistingRoute(token);
-
 		return ChatColor.GREEN + token + ChatColor.GRAY + ": " + route.toWinnersString();
 	}
 
@@ -111,17 +110,18 @@ public class PdxExplorers extends JavaPlugin {
 		boolean first = true;
 
 		for (Entry<String, PlayerProgress> entry : explorers.entrySet()) {
-			String name = entry.getKey();
-			Player player = getServer().getPlayerExact(name);
+			Player player = getServer().getPlayerExact(entry.getKey());
 			if (player != null) {
 				if (!first) {
 					builder.append(ChatColor.GRAY + ", ");
+				} else {
+					first = false;
 				}
 
-				builder.append(ChatColor.RESET + player.getDisplayName()
-						+ ChatColor.GRAY + ": "
-						+ entry.getValue().toChatString());
-				first = false;
+				builder.append(ChatColor.RESET);
+				builder.append(player.getDisplayName());
+				builder.append(ChatColor.GRAY + ": ");
+				builder.append(entry.getValue().toChatString());
 			}
 		}
 
@@ -145,10 +145,8 @@ public class PdxExplorers extends JavaPlugin {
 		if (inputMap != null) {
 			for (Entry<String, Object> e : inputMap.entrySet()) {
 				Object v = e.getValue();
-				String routeName = e.getKey().trim().replaceAll(" ", "");
-				if ((v instanceof Map<?,?>) && !routeName.isEmpty()) {
-					routes.put(routeName, new Route((Map<String,Object>)v));
-				}
+				String routeName = e.getKey();
+				routes.put(routeName, new Route((Map<String,Object>)v));
 			}
 		}
 	}
@@ -169,8 +167,6 @@ public class PdxExplorers extends JavaPlugin {
 			}
 		}
 	}
-	
-	
 
 	@SuppressWarnings("unchecked")
 	private void loadSigns() {
