@@ -257,6 +257,8 @@ public class PdxExplorers extends JavaPlugin {
 						} else {
 							sender.sendMessage(ChatColor.RED + "/explorers route give ROUTE PLAYER");
 						}
+					} else {
+						sender.sendMessage(ChatColor.RED + "Unknown route command");
 					}
 				} else if (args[0].equalsIgnoreCase("version")) {
 					sender.sendMessage(getDescription().getVersion());
