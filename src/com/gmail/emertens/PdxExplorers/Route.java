@@ -63,7 +63,7 @@ public class Route {
 	}
 
 	public boolean isOwner(final Player player) {
-		return player != null && owner.equalsIgnoreCase(player.getName());
+		return player != null && owner != null && owner.equalsIgnoreCase(player.getName());
 	}
 
 	public Iterable<String> getWinners() {
