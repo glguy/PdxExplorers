@@ -1,11 +1,22 @@
 package com.gmail.emertens.PdxExplorers;
 
+/**
+ * This class represents one of the command signs used by players to
+ * progress along a route.
+ * @author Eric Mertens
+ *
+ */
 public class CommandSign {
-	
-	private CommandSignType signType;
-	private String routeName;
+
+	private final CommandSignType signType;
+	private final String routeName;
 	private int waypointId;
+	
 	private static final String SIGN_HEADER = "[explorer]";
+	private static final String WAYPOINT = "waypoint";
+	private static final String FINISH = "finish";
+	private static final String VIEW = "view";
+	private static final String START = "start";
 	
 	public CommandSign(CommandSignType st, String n, int w) {
 		signType = st;
@@ -13,14 +24,20 @@ public class CommandSign {
 		waypointId = w;
 	}
 	
+	/**
+	 * Parses the lines of a sign and returns a object if the lines
+	 * correspond to a command sign.
+	 * @param lines 4-element array of the lines on the sign
+	 * @return sign object if, and only if, the lines correspond to a sign, null otherwise
+	 */
 	public static CommandSign makeCommandSign(String[] lines) {
 		if (lines.length != 4) return null;
 		if (!lines[0].equalsIgnoreCase(SIGN_HEADER)) return null;
 		if (lines[2].isEmpty()) return null;
 		
-		int offset = lines[1].indexOf(": ");
-		int w;
-		String cmd;
+		final int offset = lines[1].indexOf(": ");
+		final int w;
+		final String cmd;
 		
 		if (offset >= 0) {
 			cmd = lines[1].substring(0, offset);
@@ -36,13 +53,13 @@ public class CommandSign {
 		
 		final CommandSignType st;
 		
-		if (cmd.equalsIgnoreCase("start")) {
+		if (cmd.equalsIgnoreCase(START)) {
 			st = CommandSignType.START_SIGN;
-		} else if (cmd.equalsIgnoreCase("view")) {
+		} else if (cmd.equalsIgnoreCase(VIEW)) {
 			st = CommandSignType.VIEW_SIGN;
-		} else if (cmd.equalsIgnoreCase("finish")) {
+		} else if (cmd.equalsIgnoreCase(FINISH)) {
 			st = CommandSignType.FINISH_SIGN;
-		} else if (cmd.equalsIgnoreCase("waypoint")) {
+		} else if (cmd.equalsIgnoreCase(WAYPOINT)) {
 			st = CommandSignType.WAYPOINTS_SIGN;
 		} else {
 			return null;
@@ -51,14 +68,26 @@ public class CommandSign {
 		return new CommandSign(st, lines[2], w);
 	}
 
+	/**
+	 * Returns number of last way-point seen.
+	 * @return number of last way-point seen
+	 */
 	public int getWaypoint() {
 		return waypointId;
 	}
 	
+	/**
+	 * Returns sign type.
+	 * @return sign type
+	 */
 	public CommandSignType getSignType() {
 		return signType;
 	}
 	
+	/**
+	 * Returns route name.
+	 * @return route name
+	 */
 	public String getRouteName() {
 		return routeName;
 	}
