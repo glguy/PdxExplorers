@@ -1,6 +1,6 @@
 name: PdxExplorers
 main: com.gmail.emertens.PdxExplorers.PdxExplorers
-version: 1.7
+version: 1.8
 description: Separate the explorers from the rest. 
 authors: [emertens]
 
@@ -16,6 +16,7 @@ permissions:
     - explorers.create
     - explorers.delete
     - explorers.revoke
+    - explorers.rewards
     - explorers.give
   explorers.create:
     description: Create explorer signs regardless of ownership
@@ -27,7 +28,10 @@ permissions:
     description: Revoke a winner
     default: op
   explorers.give:
-    description: Reassign ownership of a route
+    description: Reassign ownership of any route
+    default: op
+  explorers.rewards
+    description: Assign rewards to a route
     default: op
   explorers.fly:
     description: Modify fly speed

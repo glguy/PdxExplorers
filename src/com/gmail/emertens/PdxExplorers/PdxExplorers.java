@@ -23,7 +23,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class PdxExplorers extends JavaPlugin {
-
+	private static final String NO_PLAYER_MSG = ChatColor.RED + "No such player.";
+	private static final String SIGN_CREATED_MSG = ChatColor.GREEN + "Explorer sign created.";
 	private static final String BAD_FINISH_MSG = "You aren't on " + ChatColor.GREEN + "%s"
 			+ ChatColor.RESET + ", you are on " + ChatColor.GREEN
 			+ "%s";
@@ -33,11 +34,9 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String NOT_STARTED_MSG = "You aren't on an exploration now.";
 	private static final String ALREADY_EXPLORING_MSG = ChatColor.YELLOW
 			+ "You are already on this exploration.";
-	public static final String createPermission = "explorers.create";
+	
 
-	private Map<String, PlayerProgress> explorers;
-	private Map<String, Route> routes;
-	private Set<Object[]> signs;
+	
 
 	private static final String SIGNS_DATA_FILE = "signs.yml";
 	private static final String EXPLORERS_DATA_FILE = "explorers.yml";
@@ -48,10 +47,22 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String EXPLORATION_FAILURE_MSG = ChatColor.RED + "Exploration failed.";
 	private static final String EXPLORATION_STARTED_MSG = ChatColor.YELLOW + "You have started exploring " + ChatColor.GREEN + "%s"
 			+ ChatColor.YELLOW + "!";
-
-	private static YmlDataFile signsYml;
-	private static YmlDataFile explorersYml;
-	private static YmlDataFile explorationsYml;
+	
+	// Permissions
+	private static final String REVOKE_PERMISSION = "explorers.revoke";
+	public static final String CREATE_PERMISSION = "explorers.create";
+	private static final String FLY_PERMISSION = "explorers.fly";
+	private static final String REWARDS_PERMISSION = "explorers.rewards";
+	private static final String DELETE_PERMISSION = "explorers.delete";
+	private static final String GIVE_PERMISSION = "explorers.give";
+	
+	private Map<String, PlayerProgress> explorers;
+	private Map<String, Route> routes;
+	private Set<Object[]> signs;
+	
+	private YmlDataFile signsYml;
+	private YmlDataFile explorersYml;
+	private YmlDataFile explorationsYml;
 
 
 	/**
@@ -82,12 +93,12 @@ public class PdxExplorers extends JavaPlugin {
 		final String name = player.getName();
 
 		Route r = getOrCreateRoute(token, name);
-		if (!(r.isOwner(player) || player.hasPermission(PdxExplorers.createPermission))) {
+		if (!r.isOwner(player) && !player.hasPermission(CREATE_PERMISSION)) {
 			throw new ExplorersPermissionException();
 		}
 		
 		signs.add(locationToArray(location));
-		player.sendMessage(ChatColor.GREEN + "Explorer sign created.");
+		player.sendMessage(SIGN_CREATED_MSG);
 		saveState();
 	}
 
@@ -271,7 +282,7 @@ public class PdxExplorers extends JavaPlugin {
 						if (args.length == 1) {
 							player.sendMessage("Fly speed: " + player.getFlySpeed());
 						} else {
-							if (!player.hasPermission("explorers.setfly")) {
+							if (!player.hasPermission(FLY_PERMISSION)) {
 								throw new ExplorersPermissionException();
 							}
 							Float speed = Float.parseFloat(args[1]);
@@ -311,11 +322,11 @@ public class PdxExplorers extends JavaPlugin {
 		
 		Player targetPlayer = getServer().getPlayer(targetName);
 		if (targetPlayer == null) {
-			sender.sendMessage(ChatColor.RED + "No such player.");
+			sender.sendMessage(NO_PLAYER_MSG);
 			return;
 		}
 		
-		if (! ((player != null && r.isOwner(player)) || sender.hasPermission("explorers.give"))) {
+		if (player != null && !r.isOwner(player) && !player.hasPermission(GIVE_PERMISSION)) {
 			throw new ExplorersPermissionException();
 		}
 		
@@ -323,14 +334,15 @@ public class PdxExplorers extends JavaPlugin {
 		sender.sendMessage(ChatColor.GREEN + "Gave " + routeName + " to " + targetPlayer.getName());
 	}
 
-	private void revokeRouteCommand(CommandSender sender, Player player,
-			String routeName, String playerName) throws ExplorersException {
-		Route r = getExistingRoute(routeName);
-		if ((player != null && r.isOwner(player))
-				|| sender.hasPermission("explorers.revoke")) {
-			r.removeWinner(playerName);
-		}
+	private void revokeRouteCommand(final CommandSender sender, final Player player,
+			final String routeName, final String playerName) throws ExplorersException {
 		
+		Route r = getExistingRoute(routeName);
+		
+		if (player != null && !r.isOwner(player) && !player.hasPermission(REVOKE_PERMISSION)) {
+			throw new ExplorersPermissionException();
+		}
+		r.removeWinner(playerName);
 	}
 
 	private void listRouteWinnersCommand(CommandSender sender, String routeName) throws ExplorersException {
@@ -338,30 +350,33 @@ public class PdxExplorers extends JavaPlugin {
 		sender.sendMessage(r.toWinnersString());
 	}
 
-	private void deleteRouteCommand(CommandSender sender, final Player player,
-			String routeName) throws ExplorersException {
+	private void deleteRouteCommand(final CommandSender sender, final Player player,
+			final String routeName) throws ExplorersException {
 		synchronized (routes) {
 			Route r = getExistingRoute(routeName);
 			
-			if (!(player != null && r.isOwner(player))
-					&& !sender.hasPermission("explorers.delete")) {
+			if (player != null && !r.isOwner(player) && !player.hasPermission(DELETE_PERMISSION)) {
 				throw new ExplorersPermissionException();
 			}
+			
 			routes.remove(routeName);
 			sender.sendMessage(ChatColor.GREEN + "Success");
-			
 		}
 	}
 	
+	private static String canonicalRouteName(final String routeName) {
+		return routeName.replaceAll(" ", "");
+	}
+	
 	private Route getExistingRoute(String name) throws ExplorersException {
-		Route r = routes.get(name.replaceAll(" ", ""));
+		Route r = routes.get(canonicalRouteName(name));
 		if (r == null) throw new ExplorersNoRouteException();
 		return r;
 	}
 	
 	private Route getOrCreateRoute(String name, String newOwner) {
 		synchronized (routes) {
-			Route r = routes.get(name.replaceAll(" ", ""));
+			Route r = routes.get(canonicalRouteName(name));
 			if (r == null) {
 				r = new Route(newOwner);
 				routes.put(name, r);
@@ -374,7 +389,7 @@ public class PdxExplorers extends JavaPlugin {
 	throws NumberFormatException, ExplorersException {
 		final Route r = getExistingRoute(route);
 
-		if (!sender.hasPermission("explorers.rewards")) {
+		if (!sender.hasPermission(REWARDS_PERMISSION)) {
 			throw new ExplorersPermissionException();
 		}
 
