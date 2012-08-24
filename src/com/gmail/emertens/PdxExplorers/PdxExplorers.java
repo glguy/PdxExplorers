@@ -343,6 +343,7 @@ public class PdxExplorers extends JavaPlugin {
 			throw new ExplorersPermissionException();
 		}
 		r.removeWinner(playerName);
+		sender.sendMessage(ChatColor.GREEN + "Success");
 	}
 
 	private void listRouteWinnersCommand(CommandSender sender, String routeName) throws ExplorersException {
