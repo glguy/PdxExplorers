@@ -4,7 +4,6 @@ package com.gmail.emertens.PdxExplorers;
  * This class represents one of the command signs used by players to
  * progress along a route.
  * @author Eric Mertens
- *
  */
 public class CommandSign {
 
@@ -25,8 +24,16 @@ public class CommandSign {
 	}
 	
 	/**
-	 * Parses the lines of a sign and returns a object if the lines
-	 * correspond to a command sign.
+	 * Parses the lines of a sign and returns a object if, and only if,
+	 * the lines correspond to a command sign.
+	 * 
+	 * A valid sign has the following structure:
+	 * <pre>
+	 * "[explorer]"
+	 * COMMAND[: NUMBER]
+	 * ROUTE NAME
+	 * </pre>
+	 * 
 	 * @param lines 4-element array of the lines on the sign
 	 * @return sign object if, and only if, the lines correspond to a sign, null otherwise
 	 */
