@@ -18,13 +18,13 @@ public class Route {
 	private Set<String> winners;
 	private Map<Material,Integer> rewards;
 
-	public Route (final String owner) {
+	public Route(final String owner) {
 		this.owner = owner;
 		winners = new HashSet<String>();
 		rewards = Collections.synchronizedMap(new HashMap<Material, Integer>());
 	}
 
-	public Route () {
+	public Route() {
 		owner = null;
 		winners = new HashSet<String>();
 		rewards = Collections.synchronizedMap(new HashMap<Material, Integer>());
@@ -66,11 +66,7 @@ public class Route {
 		return player != null && owner != null && owner.equalsIgnoreCase(player.getName());
 	}
 
-	public Iterable<String> getWinners() {
-		return winners;
-	}
-
-	public boolean hasWinners() {
+	private boolean hasWinners() {
 		return !winners.isEmpty();
 	}
 

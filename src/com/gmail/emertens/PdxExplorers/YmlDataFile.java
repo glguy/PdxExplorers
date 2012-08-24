@@ -30,7 +30,7 @@ public class YmlDataFile {
 		FileOutputStream writer = new FileOutputStream(file);
 		OutputStreamWriter osw = new OutputStreamWriter(writer, FILE_ENCODING);
 		Yaml yaml = new Yaml(options);
-		yaml.dump(o, osw);
+		yaml.dump(o, osw); 
 		osw.close();
 	}
 

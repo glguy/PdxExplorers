@@ -23,6 +23,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class PdxExplorers extends JavaPlugin {
+	private static final String NO_CONSOLE_MSG = ChatColor.RED + "Command not available to console";
 	private static final String NO_PLAYER_MSG = ChatColor.RED + "No such player.";
 	private static final String SIGN_CREATED_MSG = ChatColor.GREEN + "Explorer sign created.";
 	private static final String BAD_FINISH_MSG = "You aren't on " + ChatColor.GREEN + "%s"
@@ -34,9 +35,6 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String NOT_STARTED_MSG = "You aren't on an exploration now.";
 	private static final String ALREADY_EXPLORING_MSG = ChatColor.YELLOW
 			+ "You are already on this exploration.";
-	
-
-	
 
 	private static final String SIGNS_DATA_FILE = "signs.yml";
 	private static final String EXPLORERS_DATA_FILE = "explorers.yml";
@@ -50,7 +48,7 @@ public class PdxExplorers extends JavaPlugin {
 	
 	// Permissions
 	private static final String REVOKE_PERMISSION = "explorers.revoke";
-	public static final String CREATE_PERMISSION = "explorers.create";
+	private static final String CREATE_PERMISSION = "explorers.create";
 	private static final String FLY_PERMISSION = "explorers.fly";
 	private static final String REWARDS_PERMISSION = "explorers.rewards";
 	private static final String DELETE_PERMISSION = "explorers.delete";
@@ -220,7 +218,7 @@ public class PdxExplorers extends JavaPlugin {
 			try {
 				if (args.length == 0) {
 					if (player == null) {
-						sender.sendMessage(ChatColor.RED + "Console has no exploration status.");
+						sender.sendMessage(NO_CONSOLE_MSG);
 					} else {
 						playerStatusCommand(sender, player);
 					}
@@ -277,7 +275,7 @@ public class PdxExplorers extends JavaPlugin {
 				// This has nothing to do with exploration
 				} else if (args[0].equalsIgnoreCase("fly")) {
 					if (player == null) {
-						sender.sendMessage(ChatColor.RED + "Console can not fly");
+						sender.sendMessage(NO_CONSOLE_MSG);
 					} else {
 						if (args.length == 1) {
 							player.sendMessage("Fly speed: " + player.getFlySpeed());
@@ -465,12 +463,16 @@ public class PdxExplorers extends JavaPlugin {
 
 	/**
 	 * This method is called to update the game state when a player teleports.
-	 * @param player Account name of the player who teleported.
+	 * @param player Player who teleported
 	 */
 	public void playerTeleported(Player player) {
 		playerFailed(player);
 	}
-
+	
+	/**
+	 * This method is called to update the game state when a player dies.
+	 * @param player Player who died
+	 */
 	public void playerDied(Player player) {
 		playerFailed(player);
 	}
@@ -483,19 +485,17 @@ public class PdxExplorers extends JavaPlugin {
 	private void saveExplorations() throws IOException {
 		final Map<String, Object> output = new HashMap<String, Object>();
 
-		synchronized (routes) {
-			for (Entry<String, Route> e : routes.entrySet()) {
-				output.put(e.getKey(), e.getValue().toMap());
-			}
+		for (Entry<String, Route> e : routes.entrySet()) {
+			output.put(e.getKey(), e.getValue().toMap());
 		}
 		explorationsYml.save(output);
 	}
+	
 	private void saveExplorers() throws IOException {
 		final Map<String, Object> output = new HashMap<String, Object>();
-		synchronized (explorers) {
-			for (Entry<String, PlayerProgress> e : explorers.entrySet()) {
-				output.put(e.getKey(), e.getValue().toMap());
-			}
+		
+		for (Entry<String, PlayerProgress> e : explorers.entrySet()) {
+			output.put(e.getKey(), e.getValue().toMap());
 		}
 		explorersYml.save(output);
 	}
