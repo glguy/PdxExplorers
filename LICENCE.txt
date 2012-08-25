@@ -1,0 +1,1 @@
+<html><body>You are being <a href="https://raw.github.com/Bukkit/Bukkit/a32b392c0021c9d040ba0c850f691e24809f5c2f/LICENCE.txt">redirected</a>.</body></html>
