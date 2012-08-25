@@ -27,6 +27,12 @@ public class PlayerListener implements Listener {
 		plugin = p;
 	}
 
+	/**
+	 * Block placements events are processed to allow a user
+	 * to right-click on an explorer sign with a block in his
+	 * hand without actually placing the block.
+	 * @param event
+	 */
 	@EventHandler(ignoreCancelled = true)
 	public void onBlockPlace(BlockPlaceEvent event) {
 		Block block = event.getBlockAgainst();
@@ -39,11 +45,21 @@ public class PlayerListener implements Listener {
 		}
 	}
 
+	/**
+	 * Death events are processed to fail any progress a player
+	 * has made when he dies and respawns at home.
+	 * @param event
+	 */
 	@EventHandler(ignoreCancelled = true)
 	public void onDeath(PlayerDeathEvent event) {
 		plugin.playerDied(event.getEntity());
 	}
 	
+	/**
+	 * Fly toggle events are processed to fail players who attempt
+	 * to using flying to accelerate a route.
+	 * @param event
+	 */
 	@EventHandler(ignoreCancelled = true)
 	public void onFly(PlayerToggleFlightEvent event) {
 		if (event.isFlying()) {
@@ -51,6 +67,10 @@ public class PlayerListener implements Listener {
 		}
 	}
 	
+	/**
+	 * This handler looks for command sign activation.
+	 * @param event
+	 */
 	@EventHandler(ignoreCancelled = true)
 	public void onInteract(PlayerInteractEvent event) {
 		if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
@@ -74,6 +94,11 @@ public class PlayerListener implements Listener {
 		}
 	}
 	
+	/**
+	 * This handler looks for uses of protected block and denies them
+	 * when necessary.
+	 * @param event
+	 */
 	@EventHandler(ignoreCancelled = true)
 	public void protectButtons(PlayerInteractEvent event){
 		Block block = event.getClickedBlock();
@@ -110,6 +135,12 @@ public class PlayerListener implements Listener {
 		}
 	}
 
+	/**
+	 * This handler watches for creation of new signs in order to ensure
+	 * that only a route owner or route admin is able to create new signs
+	 * for any particular route. This protects against cheating.
+	 * @param event
+	 */
 	@EventHandler(ignoreCancelled = true)
 	public void onSignChange(SignChangeEvent event) {
 		final Player player = event.getPlayer();
@@ -126,6 +157,11 @@ public class PlayerListener implements Listener {
 		}
 	}
 
+	/**
+	 * This handler watches for teleportation and fails any route
+	 * progress when teleportation occurs.
+	 * @param event
+	 */
 	@EventHandler(ignoreCancelled = true)
 	public void onTeleport(PlayerTeleportEvent event) {
 		if (event.getCause() != TeleportCause.UNKNOWN) {

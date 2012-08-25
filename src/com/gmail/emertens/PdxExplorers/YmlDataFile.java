@@ -10,18 +10,35 @@ import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.DumperOptions.FlowStyle;
 
+/**
+ * This class is used to serialize and deserialize objects
+ * to YML files in order to persist plug-in state across
+ * restarts.
+ * 
+ * @author Eric Mertens
+ */
 public class YmlDataFile {
 
 	private static final String FILE_ENCODING = "UTF8";
 	private final File file;
 	private final DumperOptions options = new DumperOptions();
 
+	/**
+	 * Construct a new YmlDataFile which loads and saves from the given
+	 * file.
+	 * @param file The file to load from and save to
+	 */
 	public YmlDataFile(File file) {
 		this.file = file;
 		options.setDefaultFlowStyle(FlowStyle.BLOCK);
 		options.setAllowUnicode(true);
 	}
 
+	/**
+	 * Serialize an object to the associated YML file.
+	 * @param o Object to serialize
+	 * @throws IOException
+	 */
 	public void save(Object o) throws IOException {
 		if (file.isFile()) {
 			file.delete();
@@ -34,6 +51,10 @@ public class YmlDataFile {
 		osw.close();
 	}
 
+	/**
+	 * Load an object from the YML file, returns null on failure.
+	 * @return The deserialized object or null
+	 */
 	public Object load() {
 		Yaml yaml = new Yaml(options);
 		Object result;

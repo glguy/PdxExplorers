@@ -22,7 +22,16 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+/**
+ * This class implements the core logic of the PdxExplorers plug-in. This
+ * plug-in tracks in-game routes and allows players to progress through them.
+ * 
+ * @author Eric Mertens
+ *
+ */
 public class PdxExplorers extends JavaPlugin {
+	
+	// Various messages
 	private static final String NO_CONSOLE_MSG = ChatColor.RED + "Command not available to console";
 	private static final String NO_PLAYER_MSG = ChatColor.RED + "No such player.";
 	private static final String SIGN_CREATED_MSG = ChatColor.GREEN + "Explorer sign created.";
@@ -34,13 +43,7 @@ public class PdxExplorers extends JavaPlugin {
 			+ " exploration!";
 	private static final String NOT_STARTED_MSG = "You aren't on an exploration now.";
 	private static final String ALREADY_EXPLORING_MSG = ChatColor.YELLOW
-			+ "You are already on this exploration.";
-
-	private static final String SIGNS_DATA_FILE = "signs.yml";
-	private static final String EXPLORERS_DATA_FILE = "explorers.yml";
-	private static final String EXPLORATIONS_DATA_FILE = "explorations.yml";
-
-	
+			+ "You are already on this exploration.";	
 	private static final String EXPLORERS_COMMAND = "explorers";
 	private static final String EXPLORATION_FAILURE_MSG = ChatColor.RED + "Exploration failed.";
 	private static final String EXPLORATION_STARTED_MSG = ChatColor.YELLOW + "You have started exploring " + ChatColor.GREEN + "%s"
@@ -53,10 +56,16 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String REWARDS_PERMISSION = "explorers.rewards";
 	private static final String DELETE_PERMISSION = "explorers.delete";
 	private static final String GIVE_PERMISSION = "explorers.give";
+	private static final String ASSIGN_PERMISSION = "explorers.assign";
 	
 	private Map<String, PlayerProgress> explorers;
 	private Map<String, Route> routes;
 	private Set<Object[]> signs;
+	
+	// Common File objects
+	private static final String SIGNS_DATA_FILE = "signs.yml";
+	private static final String EXPLORERS_DATA_FILE = "explorers.yml";
+	private static final String EXPLORATIONS_DATA_FILE = "explorations.yml";
 	
 	private YmlDataFile signsYml;
 	private YmlDataFile explorersYml;
@@ -68,11 +77,6 @@ public class PdxExplorers extends JavaPlugin {
 	 */
 	private int counter = 0;
 
-	private Runnable signScroller = new Runnable() {
-		public void run() {
-			updateSigns();
-		}
-	};
 
 	/**
 	 * Set the player's active exploration to the given token.
@@ -266,6 +270,14 @@ public class PdxExplorers extends JavaPlugin {
 						} else {
 							sender.sendMessage(ChatColor.RED + "/explorers route give ROUTE PLAYER");
 						}
+					} else if (args[1].equalsIgnoreCase("assign")) {
+						if (args.length == 4) {
+							assignCommand(sender, args[2], args[3], 0);
+						} else if (args.length == 5) {
+							assignCommand(sender, args[2], args[3], Integer.parseInt(args[4]));
+						} else {
+							sender.sendMessage(ChatColor.RED + "/explorers route assign ROUTE PLAYER [WAYPOINT]");
+						}
 					} else {
 						sender.sendMessage(ChatColor.RED + "Unknown route command");
 					}
@@ -300,6 +312,24 @@ public class PdxExplorers extends JavaPlugin {
 			return true;
 		}
 		return false;
+	}
+
+	private void assignCommand(CommandSender sender, String routeName,
+			String playerName, int waypoint) throws ExplorersException {
+		
+		if (!sender.hasPermission(ASSIGN_PERMISSION)) {
+			throw new ExplorersPermissionException();
+		}
+		
+		Player p = getServer().getPlayer(playerName);
+		if (p == null) {
+			sender.sendMessage(NO_PLAYER_MSG);
+		} else {
+			getExistingRoute(routeName);
+			explorers.put(p.getName(), new PlayerProgress(routeName, waypoint));
+			sender.sendMessage(ChatColor.GREEN + "Success");
+		}
+		
 	}
 
 	private void playerStatusCommand(CommandSender sender, final Player player) {
@@ -443,10 +473,19 @@ public class PdxExplorers extends JavaPlugin {
 		final PlayerListener listener = new PlayerListener(this);
 		getServer().getPluginManager().registerEvents(listener, this);
 
-		// Schedule threads
+		// Schedule update thread
+		final Runnable signScroller = new Runnable() {
+			public void run() { updateSigns(); }
+		};
 		getServer().getScheduler().scheduleSyncRepeatingTask(this, signScroller, 25, 25);
 	}
 
+	/**
+	 * This method fails the current exploration for a player and
+	 * notifies that player of failure.
+	 * 
+	 * @param player The player whose progress will be reset
+	 */
 	private void playerFailed(Player player) {
 		final String name = player.getName();
 		boolean failure = false;
@@ -477,11 +516,10 @@ public class PdxExplorers extends JavaPlugin {
 		playerFailed(player);
 	}
 
-	public void removeExplorationSign(Location location) {
-		signs.remove(locationToArray(location));
-		saveState();
-	}
-
+	/**
+	 * Save route data to disk.
+	 * @throws IOException
+	 */
 	private void saveExplorations() throws IOException {
 		final Map<String, Object> output = new HashMap<String, Object>();
 
@@ -491,6 +529,10 @@ public class PdxExplorers extends JavaPlugin {
 		explorationsYml.save(output);
 	}
 	
+	/**
+	 * Save player progress to disk.
+	 * @throws IOException
+	 */
 	private void saveExplorers() throws IOException {
 		final Map<String, Object> output = new HashMap<String, Object>();
 		
@@ -500,10 +542,17 @@ public class PdxExplorers extends JavaPlugin {
 		explorersYml.save(output);
 	}
 
+	/**
+	 * Save sign locations to disk.
+	 * @throws IOException
+	 */
 	private void saveSigns() throws IOException {
 		signsYml.save(signs.toArray());
 	}
 
+	/**
+	 * Save all plug-in state to disk.
+	 */
 	public void saveState() {
 		final File dataFolder = getDataFolder();
 
@@ -533,8 +582,8 @@ public class PdxExplorers extends JavaPlugin {
 	/**
 	 * Called when a player activates a command sign.
 	 * @param player The player who activated the sign
-	 * @param signType The command string on the sign
-	 * @param token The route token on the sign
+	 * @param signType The command on the sign
+	 * @param token The route on the sign
 	 * @throws ExplorersException 
 	 */
 	public void activateSign(final Player player, final CommandSign sign) throws ExplorersException {
@@ -560,6 +609,13 @@ public class PdxExplorers extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Notify a player if they are on the current route and thus are able
+	 * to use the protected block.
+	 * @param player Player who is touching the sign
+	 * @param routeName Route associated with the sign
+	 * @throws ExplorersException
+	 */
 	private void activateEnrouteSign(Player player, String routeName) throws ExplorersException {
 		PlayerProgress p = explorers.get(player.getName());
 		
@@ -570,6 +626,13 @@ public class PdxExplorers extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Notify a player if they have completed this route and thus
+	 * are able to use the protected block.
+	 * @param player Player using the sign
+	 * @param routeName Route associated with the sign
+	 * @throws ExplorersException
+	 */
 	private void activateLockSign(Player player, String routeName) throws ExplorersException {
 		
 		Route r = getExistingRoute(routeName);
@@ -581,6 +644,12 @@ public class PdxExplorers extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Attempt to progress the player along the current route.
+	 * @param player Player using the sign
+	 * @param token Route associated with the sign
+	 * @param w Way-point number associated with the sign
+	 */
 	private void activateWaypointSign(Player player, String token, int w) {
 		PlayerProgress progress = explorers.get(player.getName());
 
@@ -598,10 +667,22 @@ public class PdxExplorers extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Display a list of winners for a route
+	 * @param player Player using the view sign
+	 * @param token Route associated with the view sign
+	 * @throws ExplorersException
+	 */
 	private void activateViewSign(final Player player, final String token) throws ExplorersException {
 		player.sendMessage(explorationList(token));
 	}
 
+	/**
+	 * Attempt to complete a route.
+	 * @param player Player using the finish sign
+	 * @param token Route associated with the finish sign
+	 * @param w Way-point number required to finish the route
+	 */
 	private void activateFinishSign(final Player player, final String token, final int w) {
 		final String name = player.getName();
 		final PlayerProgress progress = explorers.get(name);
@@ -634,6 +715,11 @@ public class PdxExplorers extends JavaPlugin {
 		}
 	}
 
+	/**
+	 * Set up the player on a new route
+	 * @param player Player using the start sign
+	 * @param token Route associated with the start sign
+	 */
 	private void activateStartSign(final Player player, final String token) {
 		String message;
 		final String name = player.getName();
@@ -697,6 +783,14 @@ public class PdxExplorers extends JavaPlugin {
 		counter++;
 	}
 
+	/**
+	 * Perform checks when a player uses a route protected block.
+	 * @param player Player using the block
+	 * @param routeName Route protecting the block
+	 * @param cst Type of protection being used.
+	 * @throws ExplorersException Exceptions will be generated when the route
+	 *         does not exist or when permission is denied.
+	 */
 	public void allowUseLockedBlock(Player player, String routeName, CommandSignType cst) throws ExplorersException {
 		
 		if (cst == CommandSignType.LOCK_SIGN) {

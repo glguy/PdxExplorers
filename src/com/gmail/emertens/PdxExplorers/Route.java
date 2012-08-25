@@ -13,6 +13,12 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+/**
+ * This class tracks the state of a route including winners and rewards. It
+ * provides methods for formatting status messages for a route.
+ * @author Eric Mertens
+ *
+ */
 public class Route {
 	private String owner;
 	private Set<String> winners;

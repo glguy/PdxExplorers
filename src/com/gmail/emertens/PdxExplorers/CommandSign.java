@@ -11,6 +11,7 @@ public class CommandSign {
 	private final String routeName;
 	private int waypointId;
 	
+	// Sign labels
 	private static final String SIGN_HEADER = "[explorer]";
 	private static final String WAYPOINT = "waypoint";
 	private static final String FINISH = "finish";

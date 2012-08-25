@@ -5,6 +5,12 @@ import java.util.Map;
 
 import org.bukkit.ChatColor;
 
+/**
+ * This class tracks a player's progress along a route and
+ * supports generating formatted messages.
+ * @author Eric Mertens
+ *
+ */
 public class PlayerProgress {
 
 	private String token;
@@ -13,6 +19,11 @@ public class PlayerProgress {
 	public PlayerProgress(String token) {
 		this.token = token;
 		waypoints = 0;
+	}
+	
+	public PlayerProgress(String token, int waypoint) {
+		this.token = token;
+		this.waypoints = waypoint;
 	}
 
 	public String getToken() {

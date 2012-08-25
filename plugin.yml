@@ -18,6 +18,7 @@ permissions:
     - explorers.revoke
     - explorers.rewards
     - explorers.give
+    - explorers.assign
   explorers.create:
     description: Create explorer signs regardless of ownership
     default: op
@@ -32,6 +33,9 @@ permissions:
     default: op
   explorers.rewards:
     description: Assign rewards to a route
+    default: op
+  explorers.assign:
+    description: Manually assign a player to a route
     default: op
   explorers.fly:
     description: Modify fly speed
