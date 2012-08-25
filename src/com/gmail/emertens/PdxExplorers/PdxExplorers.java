@@ -676,21 +676,19 @@ public class PdxExplorers extends JavaPlugin {
 				if (state instanceof Sign) {
 					final Sign sign = (Sign) state;
 
-					if (isExplorerSign(sign.getLines())) {
-						String token = sign.getLine(2);
-						final Route route = routes.get(token.replaceAll(" ", ""));
+					String token = sign.getLine(2);
+					final Route route = routes.get(token.replaceAll(" ", ""));
 
-						if (route != null) {
-							String nextName = route.pickWinner(counter);
-							if (nextName == null) {
-								nextName = ChatColor.ITALIC + "No one";
-							}
-							sign.setLine(3, nextName);
-							sign.update();
+					if (route != null) {
+						String nextName = route.pickWinner(counter);
+						if (nextName == null) {
+							nextName = ChatColor.ITALIC + "No one";
 						}
-
-						continue; // Avoid adding this to badSigns
+						sign.setLine(3, nextName);
+						sign.update();
 					}
+
+					continue; // Avoid adding this to badSigns
 				}
 				badSigns.add(location);
 			}
