@@ -50,6 +50,10 @@ Display the names of all of the routes.
 -----------------
 Display the names of all players currently on a route.
 
+/explorers assign PLAYERNAME [ROUTENAME [WAYPOINT]]
+---------------------------------
+Manually assign a player's progress on a route and waypoint. The waypoint defaults to 0 and the route defaults to none.
+
 /explorers route delete ROUTENAME
 ---------------------------------
 Delete all information about the given route.
@@ -57,10 +61,6 @@ Delete all information about the given route.
 /explorers route revoke ROUTENAME PLAYERNAME
 ---------------------------------
 Delete completion status for a player for a route
-
-/explorers route assign ROUTENAME PLAYERNAME [WAYPOINT]
----------------------------------
-Manually assign a player's progress on a route and waypoint. The waypoint defaults to 0.
 
 /explorers route show ROUTENAME
 ---------------------------------

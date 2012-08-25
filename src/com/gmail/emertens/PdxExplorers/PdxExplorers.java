@@ -230,6 +230,21 @@ public class PdxExplorers extends JavaPlugin {
 					sender.sendMessage(listExplorers());
 				} else if (args[0].equalsIgnoreCase("routes")) {
 					sender.sendMessage(routesList());
+				} else if (args[0].equalsIgnoreCase("assign")) {
+					switch (args.length) {
+					case 2:
+						assignCommand(sender, args[1], null, 0);
+						break;
+					case 3:
+						assignCommand(sender, args[1], args[2], 0);
+						break;
+					case 4:
+						assignCommand(sender, args[1], args[2], Integer.parseInt(args[3]));
+						break;
+					default:
+						sender.sendMessage(ChatColor.RED + "/explorers assign PLAYER [ROUTE [WAYPOINT]]");
+						break;
+					}
 				} else if (args[0].equalsIgnoreCase("route")) {
 					if (args.length == 1) {
 						sender.sendMessage(ChatColor.RED + "Route requires additional command");
@@ -270,14 +285,6 @@ public class PdxExplorers extends JavaPlugin {
 						} else {
 							sender.sendMessage(ChatColor.RED + "/explorers route give ROUTE PLAYER");
 						}
-					} else if (args[1].equalsIgnoreCase("assign")) {
-						if (args.length == 4) {
-							assignCommand(sender, args[2], args[3], 0);
-						} else if (args.length == 5) {
-							assignCommand(sender, args[2], args[3], Integer.parseInt(args[4]));
-						} else {
-							sender.sendMessage(ChatColor.RED + "/explorers route assign ROUTE PLAYER [WAYPOINT]");
-						}
 					} else {
 						sender.sendMessage(ChatColor.RED + "Unknown route command");
 					}
@@ -314,8 +321,8 @@ public class PdxExplorers extends JavaPlugin {
 		return false;
 	}
 
-	private void assignCommand(CommandSender sender, String routeName,
-			String playerName, int waypoint) throws ExplorersException {
+	private void assignCommand(CommandSender sender, String playerName,
+			String routeName, int waypoint) throws ExplorersException {
 		
 		if (!sender.hasPermission(ASSIGN_PERMISSION)) {
 			throw new ExplorersPermissionException();
@@ -325,8 +332,13 @@ public class PdxExplorers extends JavaPlugin {
 		if (p == null) {
 			sender.sendMessage(NO_PLAYER_MSG);
 		} else {
-			getExistingRoute(routeName);
-			explorers.put(p.getName(), new PlayerProgress(routeName, waypoint));
+			
+			if (routeName == null) {
+				explorers.remove(playerName);
+			} else {
+				getExistingRoute(routeName);
+				explorers.put(p.getName(), new PlayerProgress(routeName, waypoint));
+			}
 			sender.sendMessage(ChatColor.GREEN + "Success");
 		}
 		
