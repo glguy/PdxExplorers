@@ -2,7 +2,9 @@ package com.gmail.emertens.PdxExplorers;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -69,6 +71,42 @@ public class PlayerListener implements Listener {
 			plugin.activateSign(event.getPlayer(), cs);
 		} catch (ExplorersException e) {
 			event.getPlayer().sendMessage(ChatColor.RED + e.getMessage());
+		}
+	}
+	
+	@EventHandler(ignoreCancelled = true)
+	public void protectButtons(PlayerInteractEvent event){
+		Block block = event.getClickedBlock();
+		Material m = block.getType();
+		
+		switch (m) {
+		case STONE_BUTTON:
+		case LEVER:
+		case CHEST:
+			// These are the protected items
+			break;
+		default:
+			return;
+		}
+		
+		Block above = block.getRelative(BlockFace.UP);
+		if (above == null) return;
+		
+		BlockState state = above.getState();
+		if (!(state instanceof Sign)) return;
+
+		final Sign sign = (Sign)state;
+		CommandSign cs = CommandSign.makeCommandSign(sign.getLines());
+		if (cs == null) return;
+		
+		CommandSignType cst = cs.getSignType();
+		if (cst != CommandSignType.LOCK_SIGN && cst != CommandSignType.ENROUTE_SIGN) return;
+		
+		try {
+			plugin.allowUseLockedBlock(event.getPlayer(), cs.getRouteName(), cst);
+		} catch (ExplorersException e) {
+			event.getPlayer().sendMessage(ChatColor.RED + e.getMessage());
+			event.setCancelled(true);
 		}
 	}
 

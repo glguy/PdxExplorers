@@ -153,4 +153,8 @@ public class Route {
 	public void setOwner(String name) {
 		owner = name;
 	}
+
+	public boolean isWinner(Player player) {
+		return winners.contains(player.getName());
+	}
 }

@@ -551,6 +551,33 @@ public class PdxExplorers extends JavaPlugin {
 		case WAYPOINTS_SIGN:
 			activateWaypointSign(player, sign.getRouteName(), sign.getWaypoint());
 			break;
+		case LOCK_SIGN:
+			activateLockSign(player, sign.getRouteName());
+			break;
+		case ENROUTE_SIGN:
+			activateEnrouteSign(player, sign.getRouteName());
+			break;
+		}
+	}
+
+	private void activateEnrouteSign(Player player, String routeName) throws ExplorersException {
+		PlayerProgress p = explorers.get(player.getName());
+		
+		if (p != null && p.getToken().equalsIgnoreCase(routeName)) {
+			player.sendMessage(ChatColor.GREEN + "Unlocked");
+		} else {
+			player.sendMessage(ChatColor.RED + "You are not on this route.");
+		}
+	}
+
+	private void activateLockSign(Player player, String routeName) throws ExplorersException {
+		
+		Route r = getExistingRoute(routeName);
+		
+		if (r.isWinner(player)) {
+			player.sendMessage(ChatColor.GREEN + "Unlocked");
+		} else {
+			player.sendMessage(ChatColor.RED + "You have not completed this route.");
 		}
 	}
 
@@ -670,5 +697,20 @@ public class PdxExplorers extends JavaPlugin {
 		}
 		signs.removeAll(badSigns);
 		counter++;
+	}
+
+	public void allowUseLockedBlock(Player player, String routeName, CommandSignType cst) throws ExplorersException {
+		
+		if (cst == CommandSignType.LOCK_SIGN) {
+			Route r = getExistingRoute(routeName);
+			if (!r.isWinner(player)) {
+				throw new ExplorersPermissionException();
+			}
+		} else {
+			PlayerProgress p = explorers.get(player.getName());
+			if (p == null || !p.getToken().equalsIgnoreCase(routeName)) {
+				throw new ExplorersPermissionException();
+			}
+		}
 	}
 }

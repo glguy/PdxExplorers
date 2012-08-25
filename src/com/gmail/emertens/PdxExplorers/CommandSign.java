@@ -16,6 +16,8 @@ public class CommandSign {
 	private static final String FINISH = "finish";
 	private static final String VIEW = "view";
 	private static final String START = "start";
+	private static final String LOCK = "lock";
+	private static final String ENROUTE = "enroute";
 	
 	public CommandSign(CommandSignType st, String n, int w) {
 		signType = st;
@@ -68,6 +70,10 @@ public class CommandSign {
 			st = CommandSignType.FINISH_SIGN;
 		} else if (cmd.equalsIgnoreCase(WAYPOINT)) {
 			st = CommandSignType.WAYPOINTS_SIGN;
+		} else if (cmd.equalsIgnoreCase(LOCK)) {
+			st = CommandSignType.LOCK_SIGN;
+		} else if (cmd.equalsIgnoreCase(ENROUTE)) {
+			st = CommandSignType.ENROUTE_SIGN;
 		} else {
 			return null;
 		}
@@ -96,6 +102,6 @@ public class CommandSign {
 	 * @return route name
 	 */
 	public String getRouteName() {
-		return routeName;
+		return routeName.replaceAll(" ", "");
 	}
 }
