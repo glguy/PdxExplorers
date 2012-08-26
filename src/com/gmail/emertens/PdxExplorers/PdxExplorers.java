@@ -261,6 +261,12 @@ public class PdxExplorers extends JavaPlugin {
 						} else {
 							sender.sendMessage(ChatColor.RED + "/explorers route addreward ROUTE MATERIAL QUANTITY");
 						}
+					} else if (args[1].equalsIgnoreCase("setxp")) {
+						if (args.length == 4) {
+							setxpCommand(sender, args[2], Integer.parseInt(args[3]));
+						} else {
+							sender.sendMessage(ChatColor.RED + "/explorers route setxp ROUTE QUANTITY");
+						}
 					} else if (args[1].equalsIgnoreCase("delete")) {
 						if (args.length == 3) {
 							deleteRouteCommand(sender, player, args[2]);
@@ -314,11 +320,28 @@ public class PdxExplorers extends JavaPlugin {
 				sender.sendMessage(ChatColor.RED + e.getMessage());
 			} catch (NumberFormatException e) {
 				sender.sendMessage(ChatColor.RED + "Failed to parse number");
-
 			}
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Change the experience reward for a route.
+	 * @param sender Entity changing the reward
+	 * @param routeName Name of route to change
+	 * @param xp New amount of experience awarded on completion
+	 * @throws ExplorersException 
+	 */
+	private void setxpCommand(CommandSender sender, String routeName,
+			int xp) throws ExplorersException {
+		if (!sender.hasPermission(REWARDS_PERMISSION)) {
+			throw new ExplorersPermissionException();
+		}
+		
+		Route r = getExistingRoute(routeName);
+		r.setXpAward(xp);
+		sender.sendMessage(ChatColor.GREEN + "Success");
 	}
 
 	private void assignCommand(CommandSender sender, String playerName,

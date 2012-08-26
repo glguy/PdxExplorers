@@ -23,17 +23,20 @@ public class Route {
 	private String owner;
 	private Set<String> winners;
 	private Map<Material,Integer> rewards;
+	private int xpAward;
 
 	public Route(final String owner) {
 		this.owner = owner;
 		winners = new HashSet<String>();
 		rewards = Collections.synchronizedMap(new HashMap<Material, Integer>());
+		xpAward = 0;
 	}
 
 	public Route() {
 		owner = null;
 		winners = new HashSet<String>();
 		rewards = Collections.synchronizedMap(new HashMap<Material, Integer>());
+		xpAward = 0;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -54,6 +57,9 @@ public class Route {
 			rewards = new HashMap<Material, Integer>();
 		}
 		rewards = Collections.synchronizedMap(rewards);
+		
+		Integer award = (Integer)map.get("xpaward");
+		this.xpAward = award == null ? 0 : award;
 	}
 
 	public Map<String, Object> toMap() {
@@ -61,6 +67,7 @@ public class Route {
 		if (owner != null) { map.put("owner", owner); }
 		if (!winners.isEmpty()) { map.put("winners", winners.toArray()); }
 		if (!rewards.isEmpty()) { map.put("rewards", rewards); }
+		if (xpAward != 0) { map.put("xpaward", xpAward); }
 		return map;
 	}
 
@@ -87,6 +94,8 @@ public class Route {
 			p.sendMessage("Exploration reward given: " + e.getValue() + " "
 					+ e.getKey());
 		}
+		
+		p.giveExp(xpAward);
 	}
 
 	public String pickWinner(int i) {
@@ -100,13 +109,20 @@ public class Route {
 
 	public String toChatString() {
 		final String ownerString = owner == null ? ChatColor.ITALIC + "None" : owner;
-		final String rewardsString = rewards.isEmpty() ? ChatColor.ITALIC + "None" : rewards.toString();
-
+		final String rewardsString = rewards.isEmpty() ? "" : 
+				ChatColor.GRAY + ", " +
+				ChatColor.RED + "Rewards: " +
+				ChatColor.YELLOW + rewards.toString();
+		final String xpString = xpAward == 0 ? "" :
+			ChatColor.GRAY + ", " +
+			ChatColor.RED + "Exp: " +
+			ChatColor.YELLOW + Integer.toString(xpAward);
+		
 		return ChatColor.RED + "Owner: " + ChatColor.YELLOW + ownerString +
 				ChatColor.GRAY + ", " +
 				ChatColor.RED + "Winners: " + ChatColor.YELLOW + winners.size() +
-				ChatColor.GRAY + ", " +
-				ChatColor.RED + "Rewards: " + ChatColor.YELLOW + rewardsString;
+				rewardsString +
+				xpString;
 	}
 
 	public Map<Material,Integer> getRewards() {
@@ -162,5 +178,9 @@ public class Route {
 
 	public boolean isWinner(Player player) {
 		return winners.contains(player.getName());
+	}
+
+	public void setXpAward(int xp) {
+		xpAward = xp;
 	}
 }

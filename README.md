@@ -72,3 +72,11 @@ Add the given material in the given quantity as a reward for completing the give
 /explorers route winners ROUTENAME
 ---------------------------------
 Display the list of players who have completed this route.
+
+/explorers route give ROUTENAME PLAYERNAME
+---------------------------------
+Reassign ownership of a route to a new player.
+
+/explorers route setxp ROUTENAME QUANTITY
+---------------------------------
+Provide the given number of XP orbs as a reward for completion.
