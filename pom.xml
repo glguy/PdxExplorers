@@ -6,7 +6,6 @@
   <name>PdxExplorers</name>
   <description>Plugin to track player progress along routes</description>
   <build>
-    <sourceDirectory>src</sourceDirectory>
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
