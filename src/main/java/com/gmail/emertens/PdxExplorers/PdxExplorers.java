@@ -159,6 +159,7 @@ public class PdxExplorers extends JavaPlugin {
 			for (Entry<String, Object> e : inputMap.entrySet()) {
 				Object v = e.getValue();
 				String routeName = e.getKey();
+				if (routeName.contains("¤")) { continue; } // clean up old invalid data
 				routes.put(routeName, new Route((Map<String,Object>)v));
 			}
 		}

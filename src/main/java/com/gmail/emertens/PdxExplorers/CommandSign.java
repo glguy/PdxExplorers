@@ -1,5 +1,7 @@
 package com.gmail.emertens.PdxExplorers;
 
+import org.bukkit.ChatColor;
+
 /**
  * This class represents one of the command signs used by players to
  * progress along a route.
@@ -42,22 +44,26 @@ public class CommandSign {
 	 */
 	public static CommandSign makeCommandSign(String[] lines) {
 		if (lines.length != 4) return null;
-		if (!lines[0].equalsIgnoreCase(SIGN_HEADER)) return null;
-		if (lines[2].isEmpty()) return null;
+		final String topLine = ChatColor.stripColor(lines[0]);
+		final String cmdLine = ChatColor.stripColor(lines[1]);
+		final String destLine = ChatColor.stripColor(lines[2]);
 		
-		final int offset = lines[1].indexOf(": ");
+		if (!topLine.equalsIgnoreCase(SIGN_HEADER)) return null;
+		if (destLine.isEmpty()) return null;
+		
+		final int offset = cmdLine.indexOf(": ");
 		final int w;
 		final String cmd;
 		
 		if (offset >= 0) {
-			cmd = lines[1].substring(0, offset);
+			cmd = cmdLine.substring(0, offset);
 			try {
-				w = Integer.parseInt(lines[1].substring(offset+2), 10);
+				w = Integer.parseInt(cmdLine.substring(offset+2), 10);
 			} catch (NumberFormatException e) {
 				return null;
 			}
 		} else {
-			cmd = lines[1];
+			cmd = cmdLine;
 			w = 1;
 		}
 		
@@ -79,7 +85,7 @@ public class CommandSign {
 			return null;
 		}
 		
-		return new CommandSign(st, lines[2], w);
+		return new CommandSign(st, destLine, w);
 	}
 
 	/**
