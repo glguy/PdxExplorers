@@ -101,9 +101,14 @@ public class Route {
 	public String pickWinner(int i) {
 		if (hasWinners()) {
 			String[] arr = winners.toArray(new String[]{});
-			return arr[i % arr.length];
+			i %= arr.length + 1;
+			if (i == arr.length) {
+				return ChatColor.ITALIC + "Completed by";
+			} else {
+				return arr[i];
+			}
 		} else {
-			return null;
+			return ChatColor.ITALIC + "No players";
 		}
 	}
 

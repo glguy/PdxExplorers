@@ -798,14 +798,11 @@ public class PdxExplorers extends JavaPlugin {
 				if (state instanceof Sign) {
 					final Sign sign = (Sign) state;
 
-					String token = sign.getLine(2);
+					final String token = sign.getLine(2);
 					final Route route = routes.get(token.replaceAll(" ", ""));
 
 					if (route != null) {
-						String nextName = route.pickWinner(counter);
-						if (nextName == null) {
-							nextName = ChatColor.ITALIC + "No one";
-						}
+						final String nextName = route.pickWinner(counter);
 						sign.setLine(3, nextName);
 						sign.update();
 					}
