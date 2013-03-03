@@ -359,9 +359,17 @@ public class PdxExplorers extends JavaPlugin {
 			
 			if (routeName == null) {
 				explorers.remove(playerName);
+				p.sendMessage(ChatColor.RED + "Exploration reset");
 			} else {
 				getExistingRoute(routeName);
 				explorers.put(p.getName(), new PlayerProgress(routeName, waypoint));
+
+				if (waypoint == 0) {
+					p.sendMessage(ChatColor.YELLOW + "Exploration route set to " + ChatColor.GREEN + routeName);
+				} else {
+					p.sendMessage(ChatColor.YELLOW + "Exploration route set to " + ChatColor.GREEN + routeName
+							+ ChatColor.YELLOW + ", waypoint " + ChatColor.GREEN + waypoint);
+				}
 			}
 			sender.sendMessage(ChatColor.GREEN + "Success");
 		}
