@@ -21,7 +21,7 @@ import org.bukkit.block.Sign;
 
 public class PlayerListener implements Listener {
 
-	PdxExplorers plugin;
+	private final PdxExplorers plugin;
 
 	public PlayerListener(PdxExplorers p) {
 		plugin = p;
@@ -35,10 +35,10 @@ public class PlayerListener implements Listener {
 	 */
 	@EventHandler(ignoreCancelled = true)
 	public void onBlockPlace(BlockPlaceEvent event) {
-		Block block = event.getBlockAgainst();
-		BlockState state = block.getState();
+		final Block block = event.getBlockAgainst();
+		final BlockState state = block.getState();
 		if (state instanceof Sign) {
-			Sign sign = (Sign)state;
+			final Sign sign = (Sign)state;
 			if (PdxExplorers.isExplorerSign(sign.getLines())) {
 				event.setCancelled(true);
 			}
@@ -77,14 +77,14 @@ public class PlayerListener implements Listener {
 			return;
 		}
 
-		Block block = event.getClickedBlock();
-		BlockState state = block.getState();
+		final Block block = event.getClickedBlock();
+		final BlockState state = block.getState();
 		if (!(state instanceof Sign)) {
 			return;
 		}
 
 		final Sign sign = (Sign)state;
-		CommandSign cs = CommandSign.makeCommandSign(sign.getLines());
+		final CommandSign cs = CommandSign.makeCommandSign(sign.getLines());
 		if (cs == null) return;
 
 		try {
@@ -101,8 +101,8 @@ public class PlayerListener implements Listener {
 	 */
 	@EventHandler(ignoreCancelled = true)
 	public void protectButtons(PlayerInteractEvent event){
-		Block block = event.getClickedBlock();
-		Material m = block.getType();
+		final Block block = event.getClickedBlock();
+		final Material m = block.getType();
 		
 		switch (m) {
 		case STONE_BUTTON:
@@ -116,17 +116,17 @@ public class PlayerListener implements Listener {
 			return;
 		}
 		
-		Block above = block.getRelative(BlockFace.UP);
+		final Block above = block.getRelative(BlockFace.UP);
 		if (above == null) return;
 		
-		BlockState state = above.getState();
+		final BlockState state = above.getState();
 		if (!(state instanceof Sign)) return;
 
 		final Sign sign = (Sign)state;
-		CommandSign cs = CommandSign.makeCommandSign(sign.getLines());
+		final CommandSign cs = CommandSign.makeCommandSign(sign.getLines());
 		if (cs == null) return;
 		
-		CommandSignType cst = cs.getSignType();
+		final CommandSignType cst = cs.getSignType();
 		if (cst != CommandSignType.LOCK_SIGN && cst != CommandSignType.ENROUTE_SIGN) return;
 		
 		try {

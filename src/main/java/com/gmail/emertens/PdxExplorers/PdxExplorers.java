@@ -94,11 +94,18 @@ public class PdxExplorers extends JavaPlugin {
 		saveState();
 	}
 
+	/**
+	 * This registers a new exploration sign upon creation by a player.
+	 * @param player Player who created the sign
+	 * @param sign   The sign just created
+	 * @param location The location of the sign which was just created
+	 * @throws ExplorersException
+	 */
 	public void addExplorationSign(Player player, CommandSign sign, Location location) throws ExplorersException {
 		final String token = sign.getRouteName();
 		final String name = player.getName();
 
-		Route r = getOrCreateRoute(token, name);
+		final Route r = getOrCreateRoute(token, name);
 		if (!r.isOwner(player) && !player.hasPermission(CREATE_PERMISSION)) {
 			throw new ExplorersPermissionException();
 		}
