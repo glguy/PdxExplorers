@@ -48,6 +48,7 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String EXPLORATION_FAILURE_MSG = ChatColor.RED + "Exploration failed.";
 	private static final String EXPLORATION_STARTED_MSG = ChatColor.YELLOW + "You have started exploring " + ChatColor.GREEN + "%s"
 			+ ChatColor.YELLOW + "!";
+	private static final String LOCK_OVERRIDE_MSG = ChatColor.YELLOW + "Lock ignored";
 	
 	// Permissions
 	private static final String REVOKE_PERMISSION = "explorers.revoke";
@@ -57,6 +58,7 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String DELETE_PERMISSION = "explorers.delete";
 	private static final String GIVE_PERMISSION = "explorers.give";
 	private static final String ASSIGN_PERMISSION = "explorers.assign";
+	private static final String LOCK_OVERRIDE_PERMISSION = "explorers.lockexempt";
 	
 	private Map<String, PlayerProgress> explorers;
 	private Map<String, Route> routes;
@@ -834,16 +836,21 @@ public class PdxExplorers extends JavaPlugin {
 	 */
 	public void allowUseLockedBlock(Player player, String routeName, CommandSignType cst) throws ExplorersException {
 		
+		final boolean success;
+
 		if (cst == CommandSignType.LOCK_SIGN) {
-			Route r = getExistingRoute(routeName);
-			if (!r.isWinner(player)) {
-				throw new ExplorersPermissionException();
-			}
+			final Route r = getExistingRoute(routeName);
+			success = r.isWinner(player);
 		} else {
-			PlayerProgress p = explorers.get(player.getName());
-			if (p == null || !p.getToken().equalsIgnoreCase(routeName)) {
-				throw new ExplorersPermissionException();
-			}
+			final PlayerProgress p = explorers.get(player.getName());
+			success = p != null && p.getToken().equalsIgnoreCase(routeName);
 		}
+
+		if (success) return;
+		if (player.hasPermission(LOCK_OVERRIDE_PERMISSION)) {
+			player.sendMessage(LOCK_OVERRIDE_MSG);
+			return;
+		}
+		throw new ExplorersPermissionException();
 	}
 }

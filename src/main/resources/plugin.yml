@@ -37,6 +37,6 @@ permissions:
   explorers.assign:
     description: Manually assign a player to a route
     default: op
-  explorers.fly:
-    description: Modify fly speed
+  explorers.lockexempt:
+    description: Ignore explorer lock and enroute signs
     default: op
