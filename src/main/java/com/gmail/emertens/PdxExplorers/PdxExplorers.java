@@ -53,7 +53,6 @@ public class PdxExplorers extends JavaPlugin {
 	// Permissions
 	private static final String REVOKE_PERMISSION = "explorers.revoke";
 	private static final String CREATE_PERMISSION = "explorers.create";
-	private static final String FLY_PERMISSION = "explorers.fly";
 	private static final String REWARDS_PERMISSION = "explorers.rewards";
 	private static final String DELETE_PERMISSION = "explorers.delete";
 	private static final String GIVE_PERMISSION = "explorers.give";
@@ -298,24 +297,7 @@ public class PdxExplorers extends JavaPlugin {
 						sender.sendMessage(ChatColor.RED + "Unknown route command");
 					}
 				} else if (args[0].equalsIgnoreCase("version")) {
-					sender.sendMessage(getDescription().getVersion());
-					
-				// This has nothing to do with exploration
-				} else if (args[0].equalsIgnoreCase("fly")) {
-					if (player == null) {
-						sender.sendMessage(NO_CONSOLE_MSG);
-					} else {
-						if (args.length == 1) {
-							player.sendMessage("Fly speed: " + player.getFlySpeed());
-						} else {
-							if (!player.hasPermission(FLY_PERMISSION)) {
-								throw new ExplorersPermissionException();
-							}
-							Float speed = Float.parseFloat(args[1]);
-							player.setFlySpeed(speed);
-							player.sendMessage("Done");
-						}
-					}
+					sender.sendMessage(getDescription().getFullName());
 				} else {
 					sender.sendMessage(ChatColor.RED + "Bad command");
 				}
