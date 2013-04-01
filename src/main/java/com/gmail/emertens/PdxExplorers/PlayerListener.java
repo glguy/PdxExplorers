@@ -106,8 +106,10 @@ public class PlayerListener implements Listener {
 		
 		switch (m) {
 		case STONE_BUTTON:
+		case WOOD_BUTTON:
 		case LEVER:
 		case CHEST:
+		case ENDER_CHEST:
 			// These are the protected items
 			break;
 		default:
