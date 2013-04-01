@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.gmail.emertens.PdxExplorers</groupId>
   <artifactId>PdxExplorers</artifactId>
-  <version>1.10</version>
+  <version>1.11</version>
   <name>PdxExplorers</name>
   <description>Plugin to track player progress along routes</description>
   <build>
