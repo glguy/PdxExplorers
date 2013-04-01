@@ -44,6 +44,7 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String NOT_STARTED_MSG = "You aren't on an exploration now.";
 	private static final String ALREADY_EXPLORING_MSG = ChatColor.YELLOW
 			+ "You are already on this exploration.";	
+	private static final String NO_FLYING_MSG = ChatColor.RED + "You must land to start an exploration.";
 	private static final String EXPLORERS_COMMAND = "explorers";
 	private static final String EXPLORATION_FAILURE_MSG = ChatColor.RED + "Exploration failed.";
 	private static final String EXPLORATION_STARTED_MSG = ChatColor.YELLOW + "You have started exploring " + ChatColor.GREEN + "%s"
@@ -757,6 +758,8 @@ public class PdxExplorers extends JavaPlugin {
 
 			if (currentToken != null && currentToken.getToken().equalsIgnoreCase(token)) {
 				message = ALREADY_EXPLORING_MSG;
+			} else if (player.isFlying()) {
+				message = NO_FLYING_MSG;
 			} else {
 				if (currentToken == null) {
 					message = String.format(EXPLORATION_STARTED_MSG, token);
