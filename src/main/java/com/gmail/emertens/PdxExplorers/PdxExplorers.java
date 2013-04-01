@@ -35,20 +35,22 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String NO_CONSOLE_MSG = ChatColor.RED + "Command not available to console";
 	private static final String NO_PLAYER_MSG = ChatColor.RED + "No such player.";
 	private static final String SIGN_CREATED_MSG = ChatColor.GREEN + "Explorer sign created.";
-	private static final String BAD_FINISH_MSG = "You aren't on " + ChatColor.GREEN + "%s"
-			+ ChatColor.RESET + ", you are on " + ChatColor.GREEN
-			+ "%s";
-	private static final String SUCCESS_MSG = ChatColor.YELLOW + "%s completed the "
-			+ ChatColor.GREEN + "%s" + ChatColor.YELLOW
-			+ " exploration!";
-	private static final String NOT_STARTED_MSG = "You aren't on an exploration now.";
-	private static final String ALREADY_EXPLORING_MSG = ChatColor.YELLOW
-			+ "You are already on this exploration.";	
+	private static final String BAD_FINISH_MSG
+		= ChatColor.RED + "You aren't on " + ChatColor.GREEN + "%s"
+	    + ChatColor.RED + ", you are on " + ChatColor.GREEN + "%s";
+	private static final String SUCCESS_MSG
+		= ChatColor.YELLOW + "%s completed the "
+		+ ChatColor.GREEN  + "%s"
+		+ ChatColor.YELLOW + " exploration!";
+	private static final String NOT_STARTED_MSG = ChatColor.RED + "You aren't on an exploration now.";
+	private static final String ALREADY_EXPLORING_MSG = ChatColor.YELLOW + "You are already on this exploration.";
 	private static final String NO_FLYING_MSG = ChatColor.RED + "You must land to start an exploration.";
 	private static final String EXPLORERS_COMMAND = "explorers";
 	private static final String EXPLORATION_FAILURE_MSG = ChatColor.RED + "Exploration failed.";
-	private static final String EXPLORATION_STARTED_MSG = ChatColor.YELLOW + "You have started exploring " + ChatColor.GREEN + "%s"
-			+ ChatColor.YELLOW + "!";
+	private static final String EXPLORATION_STARTED_MSG
+		= ChatColor.YELLOW + "You have started exploring "
+	    + ChatColor.GREEN + "%s"
+		+ ChatColor.YELLOW + "!";
 	private static final String LOCK_OVERRIDE_MSG = ChatColor.YELLOW + "Lock ignored";
 	
 	// Permissions
@@ -68,7 +70,7 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String SIGNS_DATA_FILE = "signs.yml";
 	private static final String EXPLORERS_DATA_FILE = "explorers.yml";
 	private static final String EXPLORATIONS_DATA_FILE = "explorations.yml";
-	
+
 	private YmlDataFile signsYml;
 	private YmlDataFile explorersYml;
 	private YmlDataFile explorationsYml;
