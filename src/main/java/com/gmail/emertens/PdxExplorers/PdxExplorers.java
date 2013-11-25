@@ -170,7 +170,7 @@ public class PdxExplorers extends JavaPlugin {
 			for (Entry<String, Object> e : inputMap.entrySet()) {
 				Object v = e.getValue();
 				String routeName = e.getKey();
-				if (routeName.contains("¤")) { continue; } // clean up old invalid data
+				if (routeName.contains("ï¿½")) { continue; } // clean up old invalid data
 				routes.put(routeName, new Route((Map<String,Object>)v));
 			}
 		}
@@ -796,6 +796,7 @@ public class PdxExplorers extends JavaPlugin {
 			final int y = (Integer)location[2];
 			final int z = (Integer)location[3];
 
+			if (world == null) continue;
 			if (world.isChunkLoaded(x/16, z/16)) {
 				final Block block = world.getBlockAt(x, y, z);
 				final BlockState state = block.getState();
