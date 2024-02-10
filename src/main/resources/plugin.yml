@@ -1,6 +1,8 @@
 name: PdxExplorers
 main: com.gmail.emertens.PdxExplorers.PdxExplorers
-version: 1.11
+version: '1.12'
+
+api-version: '1.18'
 description: Separate the explorers from the rest. 
 authors: [emertens]
 

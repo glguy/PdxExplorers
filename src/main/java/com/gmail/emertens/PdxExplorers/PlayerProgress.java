@@ -3,7 +3,8 @@ package com.gmail.emertens.PdxExplorers;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
  * This class tracks a player's progress along a route and
@@ -50,9 +51,13 @@ public class PlayerProgress {
 		waypoints = (Integer)map.get("waypoints");
 	}
 
-	public String toChatString() {
-		final String waypointText = waypoints == 0 ?
-			 "" : ChatColor.GRAY + " [" + ChatColor.GOLD + waypoints + ChatColor.GRAY + "]";
-		return ChatColor.GREEN + token + waypointText;
+	public Component toChatString() {
+		final Component waypointText = waypoints == 0
+			? Component.text("")
+			: Component.text(" [", NamedTextColor.GRAY)
+			  .append(Component.text(waypoints, NamedTextColor.GOLD))
+			  .append(Component.text("]", NamedTextColor.GRAY));
+			
+			return Component.text(token, NamedTextColor.GREEN).append(waypointText);
 	}
 }

@@ -1,6 +1,9 @@
 package com.gmail.emertens.PdxExplorers;
 
-import org.bukkit.ChatColor;
+import java.util.List;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 
 /**
  * This class represents one of the command signs used by players to
@@ -42,11 +45,35 @@ public class CommandSign {
 	 * @param lines 4-element array of the lines on the sign
 	 * @return sign object if, and only if, the lines correspond to a sign, null otherwise
 	 */
-	public static CommandSign makeCommandSign(String[] lines) {
-		if (lines.length != 4) return null;
-		final String topLine = ChatColor.stripColor(lines[0]);
-		final String cmdLine = ChatColor.stripColor(lines[1]);
-		final String destLine = ChatColor.stripColor(lines[2]);
+	public static CommandSign makeCommandSign(List<Component> lines) {
+		if (lines.size() != 4) return null;
+		
+		final String topLine;
+		final Component topComponent = lines.get(0);
+		if (topComponent instanceof TextComponent) {
+			final TextComponent text = (TextComponent)topComponent;
+			topLine = text.content();
+		} else {
+			return null;
+		}
+
+		final String cmdLine;
+		final Component cmdComponent = lines.get(1);
+		if (cmdComponent instanceof TextComponent) {
+			final TextComponent text = (TextComponent)cmdComponent;
+			cmdLine = text.content();
+		} else {
+			return null;
+		}
+
+		final String destLine;
+		final Component destComponent = lines.get(2);
+		if (destComponent instanceof TextComponent) {
+			final TextComponent text = (TextComponent)destComponent;
+			destLine = text.content();
+		} else {
+			return null;
+		}
 		
 		if (!topLine.equalsIgnoreCase(SIGN_HEADER)) return null;
 		if (destLine.isEmpty()) return null;

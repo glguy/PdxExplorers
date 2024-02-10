@@ -6,11 +6,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -22,6 +22,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextDecoration;
+
 /**
  * This class implements the core logic of the PdxExplorers plug-in. This
  * plug-in tracks in-game routes and allows players to progress through them.
@@ -30,29 +36,22 @@ import org.bukkit.plugin.java.JavaPlugin;
  *
  */
 public class PdxExplorers extends JavaPlugin {
-	
+
 	// Various messages
-	private static final String NO_CONSOLE_MSG = ChatColor.RED + "Command not available to console";
-	private static final String NO_PLAYER_MSG = ChatColor.RED + "No such player.";
-	private static final String SIGN_CREATED_MSG = ChatColor.GREEN + "Explorer sign created.";
-	private static final String BAD_FINISH_MSG
-		= ChatColor.RED + "You aren't on " + ChatColor.GREEN + "%s"
-	    + ChatColor.RED + ", you are on " + ChatColor.GREEN + "%s";
-	private static final String SUCCESS_MSG
-		= ChatColor.YELLOW + "%s completed the "
-		+ ChatColor.GREEN  + "%s"
-		+ ChatColor.YELLOW + " exploration!";
-	private static final String NOT_STARTED_MSG = ChatColor.RED + "You aren't on an exploration now.";
-	private static final String ALREADY_EXPLORING_MSG = ChatColor.YELLOW + "You are already on this exploration.";
-	private static final String NO_FLYING_MSG = ChatColor.RED + "You must land to start an exploration.";
+	private static final Component NO_CONSOLE_MSG = Component.text("Command not available to console",
+			NamedTextColor.RED);
+	private static final Component NO_PLAYER_MSG = Component.text("No such player.", NamedTextColor.RED);
+	private static final Component SIGN_CREATED_MSG = Component.text("Explorer sign created.", NamedTextColor.GREEN);
+	private static final Component NOT_STARTED_MSG = Component.text("You aren't on an exploration now.",
+			NamedTextColor.RED);
+	private static final Component ALREADY_EXPLORING_MSG = Component.text("You are already on this exploration.",
+			NamedTextColor.YELLOW);
+	private static final Component NO_FLYING_MSG = Component.text("You must land to start an exploration.",
+			NamedTextColor.RED);
 	private static final String EXPLORERS_COMMAND = "explorers";
-	private static final String EXPLORATION_FAILURE_MSG = ChatColor.RED + "Exploration failed.";
-	private static final String EXPLORATION_STARTED_MSG
-		= ChatColor.YELLOW + "You have started exploring "
-	    + ChatColor.GREEN + "%s"
-		+ ChatColor.YELLOW + "!";
-	private static final String LOCK_OVERRIDE_MSG = ChatColor.YELLOW + "Lock ignored";
-	
+	private static final Component EXPLORATION_FAILURE_MSG = Component.text("Exploration failed.", NamedTextColor.RED);
+	private static final Component LOCK_OVERRIDE_MSG = Component.text("Lock ignored", NamedTextColor.YELLOW);
+
 	// Permissions
 	private static final String REVOKE_PERMISSION = "explorers.revoke";
 	private static final String CREATE_PERMISSION = "explorers.create";
@@ -61,11 +60,11 @@ public class PdxExplorers extends JavaPlugin {
 	private static final String GIVE_PERMISSION = "explorers.give";
 	private static final String ASSIGN_PERMISSION = "explorers.assign";
 	private static final String LOCK_OVERRIDE_PERMISSION = "explorers.lockexempt";
-	
+
 	private Map<String, PlayerProgress> explorers;
 	private Map<String, Route> routes;
 	private Set<Object[]> signs;
-	
+
 	// Common File objects
 	private static final String SIGNS_DATA_FILE = "signs.yml";
 	private static final String EXPLORERS_DATA_FILE = "explorers.yml";
@@ -75,16 +74,15 @@ public class PdxExplorers extends JavaPlugin {
 	private YmlDataFile explorersYml;
 	private YmlDataFile explorationsYml;
 
-
 	/**
 	 * This counter increments on sign updates to track which name to show next.
 	 */
 	private int counter = 0;
 
-
 	/**
 	 * Set the player's active exploration to the given token.
-	 * @param name Player's name
+	 * 
+	 * @param name  Player's name
 	 * @param token Exploration's token
 	 */
 	private void addPlayerToExploration(final Player player, String token) {
@@ -96,8 +94,9 @@ public class PdxExplorers extends JavaPlugin {
 
 	/**
 	 * This registers a new exploration sign upon creation by a player.
-	 * @param player Player who created the sign
-	 * @param sign   The sign just created
+	 * 
+	 * @param player   Player who created the sign
+	 * @param sign     The sign just created
 	 * @param location The location of the sign which was just created
 	 * @throws ExplorersException
 	 */
@@ -109,52 +108,56 @@ public class PdxExplorers extends JavaPlugin {
 		if (!r.isOwner(player) && !player.hasPermission(CREATE_PERMISSION)) {
 			throw new ExplorersPermissionException();
 		}
-		
+
 		signs.add(locationToArray(location));
 		player.sendMessage(SIGN_CREATED_MSG);
 		saveState();
 	}
 
-	private String explorationList(String token) throws ExplorersException {
+	private Component explorationList(String token) throws ExplorersException {
 		Route route = getExistingRoute(token);
-		return ChatColor.GREEN + token + ChatColor.GRAY + ": " + route.toWinnersString();
+		return Component.text(token, NamedTextColor.GREEN)
+				.append(Component.text(": ", NamedTextColor.GRAY))
+				.append(route.toWinnersString());
 	}
 
 	/**
 	 * Predicate if these lines form a valid sign
+	 * 
 	 * @param sign An array of 4 signs on a sign
 	 * @return True if these lines form a valid command sign
 	 */
-	public static boolean isExplorerSign(final String[] lines) {
+	public static boolean isExplorerSign(List<Component> lines) {
 		return CommandSign.makeCommandSign(lines) != null;
 	}
 
-	private String listExplorers() {
-		StringBuilder builder = new StringBuilder();
+	private Component listExplorers() {
+		TextComponent.Builder builder = Component.text();
+		builder.append(Component.text("Explorers: ", NamedTextColor.YELLOW));
+
 		boolean first = true;
 
 		for (Entry<String, PlayerProgress> entry : explorers.entrySet()) {
 			Player player = getServer().getPlayerExact(entry.getKey());
 			if (player != null) {
 				if (!first) {
-					builder.append(ChatColor.GRAY + ", ");
+					builder.append(Component.text(", ", NamedTextColor.GRAY));
 				} else {
 					first = false;
 				}
 
-				builder.append(ChatColor.RESET);
-				builder.append(player.getDisplayName());
-				builder.append(ChatColor.GRAY + ": ");
+				builder.append(player.displayName());
+				builder.append(Component.text(": ", NamedTextColor.GRAY));
 				builder.append(entry.getValue().toChatString());
 			}
 		}
 
 		// After iterating through all the players it is possible that none were online
 		if (first) {
-			builder.append(ChatColor.ITALIC + "None");
+			builder.append(Component.text("None", Style.style(TextDecoration.ITALIC)));
 		}
 
-		return ChatColor.YELLOW + "Explorers: " + ChatColor.WHITE + builder;
+		return builder.build();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -170,8 +173,10 @@ public class PdxExplorers extends JavaPlugin {
 			for (Entry<String, Object> e : inputMap.entrySet()) {
 				Object v = e.getValue();
 				String routeName = e.getKey();
-				if (routeName.contains("�")) { continue; } // clean up old invalid data
-				routes.put(routeName, new Route((Map<String,Object>)v));
+				if (routeName.contains("�")) {
+					continue;
+				} // clean up old invalid data
+				routes.put(routeName, new Route((Map<String, Object>) v));
 			}
 		}
 	}
@@ -181,21 +186,21 @@ public class PdxExplorers extends JavaPlugin {
 
 		explorers = Collections.synchronizedMap(new HashMap<String, PlayerProgress>());
 
-		Map<String, Object> inputMap = (Map<String, Object>)explorersYml.load();
+		Map<String, Object> inputMap = (Map<String, Object>) explorersYml.load();
 
 		if (inputMap == null) {
 			getLogger().warning("Using empty explorers list");
 		} else {
-			for (Entry<String,Object> e : inputMap.entrySet()) {
+			for (Entry<String, Object> e : inputMap.entrySet()) {
 				Object v = e.getValue();
-				explorers.put(e.getKey(), new  PlayerProgress((Map<String,Object>)v));
+				explorers.put(e.getKey(), new PlayerProgress((Map<String, Object>) v));
 			}
 		}
 	}
 
 	@SuppressWarnings("unchecked")
 	private void loadSigns() {
-		ArrayList<Object> signsArray = (ArrayList<Object>)signsYml.load();
+		ArrayList<Object> signsArray = (ArrayList<Object>) signsYml.load();
 		signs = new HashSet<Object[]>();
 
 		if (signsArray == null) {
@@ -244,77 +249,82 @@ public class PdxExplorers extends JavaPlugin {
 					sender.sendMessage(routesList());
 				} else if (args[0].equalsIgnoreCase("assign")) {
 					switch (args.length) {
-					case 2:
-						assignCommand(sender, args[1], null, 0);
-						break;
-					case 3:
-						assignCommand(sender, args[1], args[2], 0);
-						break;
-					case 4:
-						assignCommand(sender, args[1], args[2], Integer.parseInt(args[3]));
-						break;
-					default:
-						sender.sendMessage(ChatColor.RED + "/explorers assign PLAYER [ROUTE [WAYPOINT]]");
-						break;
+						case 2:
+							assignCommand(sender, args[1], null, 0);
+							break;
+						case 3:
+							assignCommand(sender, args[1], args[2], 0);
+							break;
+						case 4:
+							assignCommand(sender, args[1], args[2], Integer.parseInt(args[3]));
+							break;
+						default:
+							sender.sendMessage(
+									Component.text("/explorers assign PLAYER [ROUTE [WAYPOINT]]", NamedTextColor.RED));
+							break;
 					}
 				} else if (args[0].equalsIgnoreCase("route")) {
 					if (args.length == 1) {
-						sender.sendMessage(ChatColor.RED + "Route requires additional command");
+						sender.sendMessage(Component.text("Route requires additional command", NamedTextColor.RED));
 					} else if (args[1].equalsIgnoreCase("show")) {
 						if (args.length == 3) {
 							Route r = getExistingRoute(args[2]);
 							sender.sendMessage(r.toChatString());
 						} else {
-							sender.sendMessage(ChatColor.RED + "/explorers route show ROUTE");
+							sender.sendMessage(Component.text("/explorers route show ROUTE", NamedTextColor.RED));
 						}
 					} else if (args[1].equalsIgnoreCase("addreward")) {
 						if (args.length == 5) {
 							addRewardsCommand(sender, args[2], args[3], args[4]);
 						} else {
-							sender.sendMessage(ChatColor.RED + "/explorers route addreward ROUTE MATERIAL QUANTITY");
+							sender.sendMessage(Component.text("/explorers route addreward ROUTE MATERIAL QUANTITY",
+									NamedTextColor.RED));
 						}
 					} else if (args[1].equalsIgnoreCase("setxp")) {
 						if (args.length == 4) {
 							setxpCommand(sender, args[2], Integer.parseInt(args[3]));
 						} else {
-							sender.sendMessage(ChatColor.RED + "/explorers route setxp ROUTE QUANTITY");
+							sender.sendMessage(
+									Component.text("/explorers route setxp ROUTE QUANTITY", NamedTextColor.RED));
 						}
 					} else if (args[1].equalsIgnoreCase("delete")) {
 						if (args.length == 3) {
 							deleteRouteCommand(sender, player, args[2]);
 						} else {
-							sender.sendMessage(ChatColor.RED + "/explorers route delete ROUTE");
+							sender.sendMessage(Component.text("/explorers route delete ROUTE", NamedTextColor.RED));
 						}
 					} else if (args[1].equalsIgnoreCase("revoke")) {
 						if (args.length == 4) {
 							revokeRouteCommand(sender, player, args[2], args[3]);
 						} else {
-							sender.sendMessage(ChatColor.RED + "/explorers route revoke ROUTE PLAYER");
+							sender.sendMessage(
+									Component.text("/explorers route revoke ROUTE PLAYER", NamedTextColor.RED));
 						}
 					} else if (args[1].equalsIgnoreCase("winners")) {
 						if (args.length == 3) {
 							listRouteWinnersCommand(sender, args[2]);
 						} else {
-							sender.sendMessage(ChatColor.RED + "/explorers route winners ROUTE");
+							sender.sendMessage(Component.text("/explorers route winners ROUTE", NamedTextColor.RED));
 						}
 					} else if (args[1].equalsIgnoreCase("give")) {
 						if (args.length == 4) {
 							routeGiveCommand(sender, player, args[2], args[3]);
 						} else {
-							sender.sendMessage(ChatColor.RED + "/explorers route give ROUTE PLAYER");
+							sender.sendMessage(
+									Component.text("/explorers route give ROUTE PLAYER", NamedTextColor.RED));
 						}
 					} else {
-						sender.sendMessage(ChatColor.RED + "Unknown route command");
+						sender.sendMessage(Component.text("Unknown route command", NamedTextColor.RED));
 					}
 				} else if (args[0].equalsIgnoreCase("version")) {
 					sender.sendMessage(getDescription().getFullName());
 				} else {
-					sender.sendMessage(ChatColor.RED + "Bad command");
+					sender.sendMessage(Component.text("Bad command", NamedTextColor.RED));
 				}
 			} catch (ExplorersException e) {
-				sender.sendMessage(ChatColor.RED + e.getMessage());
+				sender.sendMessage(Component.text(e.getMessage(), NamedTextColor.RED));
 			} catch (NumberFormatException e) {
-				sender.sendMessage(ChatColor.RED + "Failed to parse number");
+				sender.sendMessage(Component.text("Failed to parse number", NamedTextColor.RED));
 			}
 			return true;
 		}
@@ -323,93 +333,99 @@ public class PdxExplorers extends JavaPlugin {
 
 	/**
 	 * Change the experience reward for a route.
-	 * @param sender Entity changing the reward
+	 * 
+	 * @param sender    Entity changing the reward
 	 * @param routeName Name of route to change
-	 * @param xp New amount of experience awarded on completion
-	 * @throws ExplorersException 
+	 * @param xp        New amount of experience awarded on completion
+	 * @throws ExplorersException
 	 */
 	private void setxpCommand(CommandSender sender, String routeName,
 			int xp) throws ExplorersException {
 		if (!sender.hasPermission(REWARDS_PERMISSION)) {
 			throw new ExplorersPermissionException();
 		}
-		
+
 		Route r = getExistingRoute(routeName);
 		r.setXpAward(xp);
-		sender.sendMessage(ChatColor.GREEN + "Success");
+		sender.sendMessage(Component.text("Success", NamedTextColor.GREEN));
 	}
 
 	private void assignCommand(CommandSender sender, String playerName,
 			String routeName, int waypoint) throws ExplorersException {
-		
+
 		if (!sender.hasPermission(ASSIGN_PERMISSION)) {
 			throw new ExplorersPermissionException();
 		}
-		
+
 		Player p = getServer().getPlayer(playerName);
 		if (p == null) {
 			sender.sendMessage(NO_PLAYER_MSG);
 		} else {
-			
+
 			if (routeName == null) {
 				explorers.remove(playerName);
-				p.sendMessage(ChatColor.RED + "Exploration reset");
+				p.sendMessage(Component.text("Exploration reset", NamedTextColor.RED));
 			} else {
 				getExistingRoute(routeName);
 				explorers.put(p.getName(), new PlayerProgress(routeName, waypoint));
 
 				if (waypoint == 0) {
-					p.sendMessage(ChatColor.YELLOW + "Exploration route set to " + ChatColor.GREEN + routeName);
+					p.sendMessage(Component.text("Exploration route set to ", NamedTextColor.YELLOW)
+							.append(Component.text(routeName, NamedTextColor.GREEN)));
 				} else {
-					p.sendMessage(ChatColor.YELLOW + "Exploration route set to " + ChatColor.GREEN + routeName
-							+ ChatColor.YELLOW + ", waypoint " + ChatColor.GREEN + waypoint);
+					p.sendMessage(
+							Component.text("Exploration route set to ", NamedTextColor.YELLOW)
+									.append(Component.text(routeName, NamedTextColor.GREEN))
+									.append(Component.text(", waypoint ", NamedTextColor.YELLOW))
+									.append(Component.text(waypoint, NamedTextColor.GREEN)));
 				}
 			}
-			sender.sendMessage(ChatColor.GREEN + "Success");
+			sender.sendMessage(Component.text("Success", NamedTextColor.GREEN));
 		}
-		
+
 	}
 
 	private void playerStatusCommand(CommandSender sender, final Player player) {
 		final String name = player.getName();
 		final PlayerProgress progress = explorers.get(name);
-		final String formattedToken = progress == null ? ChatColor.RED
-				+ "None"
+		final Component formattedToken = progress == null
+				? Component.text("None", NamedTextColor.RED)
 				: progress.toChatString();
 
-		sender.sendMessage(ChatColor.YELLOW + "Exploration: "
-				+ formattedToken);
+		sender.sendMessage(Component.text("Exploration: ", NamedTextColor.YELLOW).append(formattedToken));
 	}
 
 	private void routeGiveCommand(CommandSender sender, Player player,
 			String routeName, String targetName) throws ExplorersException {
-		
+
 		Route r = getExistingRoute(routeName);
-		
+
 		Player targetPlayer = getServer().getPlayer(targetName);
 		if (targetPlayer == null) {
 			sender.sendMessage(NO_PLAYER_MSG);
 			return;
 		}
-		
+
 		if (player != null && !r.isOwner(player) && !player.hasPermission(GIVE_PERMISSION)) {
 			throw new ExplorersPermissionException();
 		}
-		
+
 		r.setOwner(targetPlayer.getName());
-		sender.sendMessage(ChatColor.GREEN + "Gave " + routeName + " to " + targetPlayer.getName());
+		sender.sendMessage(
+				Component.text("Gave " + routeName + " to ", NamedTextColor.GREEN)
+						.append(targetPlayer.displayName()));
 	}
 
 	private void revokeRouteCommand(final CommandSender sender, final Player player,
 			final String routeName, final String playerName) throws ExplorersException {
-		
+
 		Route r = getExistingRoute(routeName);
-		
+
 		if (player != null && !r.isOwner(player) && !player.hasPermission(REVOKE_PERMISSION)) {
 			throw new ExplorersPermissionException();
 		}
 		r.removeWinner(playerName);
-		sender.sendMessage(ChatColor.GREEN + "Success");
+		sender.sendMessage(Component.text("Success", NamedTextColor.GREEN));
 	}
 
 	private void listRouteWinnersCommand(CommandSender sender, String routeName) throws ExplorersException {
@@ -421,26 +437,27 @@ public class PdxExplorers extends JavaPlugin {
 			final String routeName) throws ExplorersException {
 		synchronized (routes) {
 			Route r = getExistingRoute(routeName);
-			
+
 			if (player != null && !r.isOwner(player) && !player.hasPermission(DELETE_PERMISSION)) {
 				throw new ExplorersPermissionException();
 			}
-			
+
 			routes.remove(routeName);
-			sender.sendMessage(ChatColor.GREEN + "Success");
+			sender.sendMessage(Component.text("Success", NamedTextColor.GREEN));
 		}
 	}
-	
+
 	private static String canonicalRouteName(final String routeName) {
 		return routeName.replaceAll(" ", "");
 	}
-	
+
 	private Route getExistingRoute(String name) throws ExplorersException {
 		Route r = routes.get(canonicalRouteName(name));
-		if (r == null) throw new ExplorersNoRouteException();
+		if (r == null)
+			throw new ExplorersNoRouteException();
 		return r;
 	}
-	
+
 	private Route getOrCreateRoute(String name, String newOwner) {
 		synchronized (routes) {
 			Route r = routes.get(canonicalRouteName(name));
@@ -453,7 +470,7 @@ public class PdxExplorers extends JavaPlugin {
 	}
 
 	private void addRewardsCommand(CommandSender sender, String route, String materialString, String amountString)
-	throws NumberFormatException, ExplorersException {
+			throws NumberFormatException, ExplorersException {
 		final Route r = getExistingRoute(route);
 
 		if (!sender.hasPermission(REWARDS_PERMISSION)) {
@@ -462,7 +479,7 @@ public class PdxExplorers extends JavaPlugin {
 
 		final Material material = Material.matchMaterial(materialString);
 		if (material == null) {
-			sender.sendMessage(ChatColor.RED + "Unable to parse material");
+			sender.sendMessage(Component.text("Unable to parse material", NamedTextColor.RED));
 			return;
 		}
 
@@ -470,21 +487,22 @@ public class PdxExplorers extends JavaPlugin {
 		amount = Integer.parseInt(amountString, 10);
 
 		r.addReward(material, amount);
-		sender.sendMessage(ChatColor.GREEN + "Reward updated");
+		sender.sendMessage(Component.text("Reward updated", NamedTextColor.GREEN));
 	}
 
-	private String routesList() {
-		StringBuilder builder = new StringBuilder();
+	private TextComponent routesList() {
+		TextComponent.Builder builder = Component.text();
 		boolean first = true;
-		builder.append("Routes: ");
+		builder.append(Component.text("Routes: "));
 
 		for (String token : routes.keySet()) {
-			if (!first) builder.append(ChatColor.GRAY + ", ");
+			if (!first)
+				builder.append(Component.text(", ", NamedTextColor.GRAY));
 			first = false;
-			builder.append(ChatColor.YELLOW + token);
+			builder.append(Component.text(token, NamedTextColor.YELLOW));
 		}
 
-		return builder.toString();
+		return builder.build();
 	}
 
 	@Override
@@ -513,7 +531,9 @@ public class PdxExplorers extends JavaPlugin {
 
 		// Schedule update thread
 		final Runnable signScroller = new Runnable() {
-			public void run() { updateSigns(); }
+			public void run() {
+				updateSigns();
+			}
 		};
 		getServer().getScheduler().scheduleSyncRepeatingTask(this, signScroller, 25, 25);
 	}
@@ -540,14 +560,16 @@ public class PdxExplorers extends JavaPlugin {
 
 	/**
 	 * This method is called to update the game state when a player teleports.
+	 * 
 	 * @param player Player who teleported
 	 */
 	public void playerTeleported(Player player) {
 		playerFailed(player);
 	}
-	
+
 	/**
 	 * This method is called to update the game state when a player dies.
+	 * 
 	 * @param player Player who died
 	 */
 	public void playerDied(Player player) {
@@ -556,6 +578,7 @@ public class PdxExplorers extends JavaPlugin {
 
 	/**
 	 * Save route data to disk.
+	 * 
 	 * @throws IOException
 	 */
 	private void saveExplorations() throws IOException {
@@ -566,14 +589,15 @@ public class PdxExplorers extends JavaPlugin {
 		}
 		explorationsYml.save(output);
 	}
-	
+
 	/**
 	 * Save player progress to disk.
+	 * 
 	 * @throws IOException
 	 */
 	private void saveExplorers() throws IOException {
 		final Map<String, Object> output = new HashMap<String, Object>();
-		
+
 		for (Entry<String, PlayerProgress> e : explorers.entrySet()) {
 			output.put(e.getKey(), e.getValue().toMap());
 		}
@@ -582,6 +606,7 @@ public class PdxExplorers extends JavaPlugin {
 
 	/**
 	 * Save sign locations to disk.
+	 * 
 	 * @throws IOException
 	 */
 	private void saveSigns() throws IOException {
@@ -619,74 +644,78 @@ public class PdxExplorers extends JavaPlugin {
 
 	/**
 	 * Called when a player activates a command sign.
-	 * @param player The player who activated the sign
+	 * 
+	 * @param player   The player who activated the sign
 	 * @param signType The command on the sign
-	 * @param token The route on the sign
-	 * @throws ExplorersException 
+	 * @param token    The route on the sign
+	 * @throws ExplorersException
 	 */
 	public void activateSign(final Player player, final CommandSign sign) throws ExplorersException {
 		switch (sign.getSignType()) {
-		case FINISH_SIGN:
-			activateFinishSign(player, sign.getRouteName(), sign.getWaypoint());
-			break;
-		case START_SIGN:
-			activateStartSign(player, sign.getRouteName());
-			break;
-		case VIEW_SIGN:
-			activateViewSign(player, sign.getRouteName());
-			break;
-		case WAYPOINTS_SIGN:
-			activateWaypointSign(player, sign.getRouteName(), sign.getWaypoint());
-			break;
-		case LOCK_SIGN:
-			activateLockSign(player, sign.getRouteName());
-			break;
-		case ENROUTE_SIGN:
-			activateEnrouteSign(player, sign.getRouteName());
-			break;
+			case FINISH_SIGN:
+				activateFinishSign(player, sign.getRouteName(), sign.getWaypoint());
+				break;
+			case START_SIGN:
+				activateStartSign(player, sign.getRouteName());
+				break;
+			case VIEW_SIGN:
+				activateViewSign(player, sign.getRouteName());
+				break;
+			case WAYPOINTS_SIGN:
+				activateWaypointSign(player, sign.getRouteName(), sign.getWaypoint());
+				break;
+			case LOCK_SIGN:
+				activateLockSign(player, sign.getRouteName());
+				break;
+			case ENROUTE_SIGN:
+				activateEnrouteSign(player, sign.getRouteName());
+				break;
 		}
 	}
 
 	/**
 	 * Notify a player if they are on the current route and thus are able
 	 * to use the protected block.
-	 * @param player Player who is touching the sign
+	 * 
+	 * @param player    Player who is touching the sign
 	 * @param routeName Route associated with the sign
 	 * @throws ExplorersException
 	 */
 	private void activateEnrouteSign(Player player, String routeName) throws ExplorersException {
 		PlayerProgress p = explorers.get(player.getName());
-		
+
 		if (p != null && p.getToken().equalsIgnoreCase(routeName)) {
-			player.sendMessage(ChatColor.GREEN + "Unlocked");
+			player.sendMessage(Component.text("Unlocked", NamedTextColor.GREEN));
 		} else {
-			player.sendMessage(ChatColor.RED + "You are not on this route.");
+			player.sendMessage(Component.text("You are not on this route.", NamedTextColor.RED));
 		}
 	}
 
 	/**
 	 * Notify a player if they have completed this route and thus
 	 * are able to use the protected block.
-	 * @param player Player using the sign
+	 * 
+	 * @param player    Player using the sign
 	 * @param routeName Route associated with the sign
 	 * @throws ExplorersException
 	 */
 	private void activateLockSign(Player player, String routeName) throws ExplorersException {
-		
+
 		Route r = getExistingRoute(routeName);
-		
+
 		if (r.isWinner(player)) {
-			player.sendMessage(ChatColor.GREEN + "Unlocked");
+			player.sendMessage(Component.text("Unlocked", NamedTextColor.GREEN));
 		} else {
-			player.sendMessage(ChatColor.RED + "You have not completed this route.");
+			player.sendMessage(Component.text("You have not completed this route.", NamedTextColor.RED));
 		}
 	}
 
 	/**
 	 * Attempt to progress the player along the current route.
+	 * 
 	 * @param player Player using the sign
-	 * @param token Route associated with the sign
-	 * @param w Way-point number associated with the sign
+	 * @param token  Route associated with the sign
+	 * @param w      Way-point number associated with the sign
 	 */
 	private void activateWaypointSign(Player player, String token, int w) {
 		PlayerProgress progress = explorers.get(player.getName());
@@ -694,21 +723,27 @@ public class PdxExplorers extends JavaPlugin {
 		if (progress == null) {
 			player.sendMessage(NOT_STARTED_MSG);
 		} else if (!progress.getToken().equalsIgnoreCase(token)) {
-			player.sendMessage(String.format(BAD_FINISH_MSG, token, progress.getToken()));
+			player.sendMessage(
+					Component.text("You aren't on ", NamedTextColor.RED)
+							.append(Component.text(token, NamedTextColor.GREEN))
+							.append(Component.text(", you are on ", NamedTextColor.RED))
+							.append(Component.text(progress.getToken(), NamedTextColor.GREEN)));
 		} else {
 			if (progress.getWaypoints() + 1 == w) {
 				progress.setWaypoints(w);
-				player.sendMessage(ChatColor.GREEN + "Progress recorded!");
+				player.sendMessage(Component.text("Progress recorded!", NamedTextColor.GREEN));
 			} else {
-				player.sendMessage(ChatColor.RED + "You need waypoint " + (progress.getWaypoints()+1));
+				player.sendMessage(
+						Component.text("You need waypoint " + (progress.getWaypoints() + 1), NamedTextColor.RED));
 			}
 		}
 	}
 
 	/**
 	 * Display a list of winners for a route
+	 * 
 	 * @param player Player using the view sign
-	 * @param token Route associated with the view sign
+	 * @param token  Route associated with the view sign
 	 * @throws ExplorersException
 	 */
 	private void activateViewSign(final Player player, final String token) throws ExplorersException {
@@ -717,15 +752,16 @@ public class PdxExplorers extends JavaPlugin {
 
 	/**
 	 * Attempt to complete a route.
+	 * 
 	 * @param player Player using the finish sign
-	 * @param token Route associated with the finish sign
-	 * @param w Way-point number required to finish the route
+	 * @param token  Route associated with the finish sign
+	 * @param w      Way-point number required to finish the route
 	 */
 	private void activateFinishSign(final Player player, final String token, final int w) {
 		final String name = player.getName();
 		final PlayerProgress progress = explorers.get(name);
 
-		final String message;
+		final Component message;
 		boolean broadcast = false;
 
 		if (progress == null) {
@@ -734,20 +770,28 @@ public class PdxExplorers extends JavaPlugin {
 
 			if (progress.getWaypoints() + 1 == w) {
 				broadcast = true;
-				message = String.format(SUCCESS_MSG, name, token);
+				message = player.displayName().append(
+						Component.text(" completed the ", NamedTextColor.YELLOW))
+						.append(
+								Component.text(token, NamedTextColor.GREEN))
+						.append(
+								Component.text(" exploration!", NamedTextColor.YELLOW));
 
 				explorers.remove(name);
 				addPlayerToExploration(player, token);
 				saveState();
 			} else {
-				message = ChatColor.RED + "You need waypoint " + (progress.getWaypoints()+1);
+				message = Component.text("You need waypoint " + (progress.getWaypoints() + 1), NamedTextColor.RED);
 			}
 		} else {
-			message = String.format(BAD_FINISH_MSG, token, progress.getToken());
+			message = Component.text("You aren't on ", NamedTextColor.RED)
+					.append(Component.text(token, NamedTextColor.GREEN))
+					.append(Component.text(", you are on ", NamedTextColor.RED))
+					.append(Component.text(progress.getToken(), NamedTextColor.GREEN));
 		}
 
 		if (broadcast) {
-			getServer().broadcastMessage(message);
+			getServer().broadcast(message);
 		} else {
 			player.sendMessage(message);
 		}
@@ -755,11 +799,12 @@ public class PdxExplorers extends JavaPlugin {
 
 	/**
 	 * Set up the player on a new route
+	 * 
 	 * @param player Player using the start sign
-	 * @param token Route associated with the start sign
+	 * @param token  Route associated with the start sign
 	 */
 	private void activateStartSign(final Player player, final String token) {
-		String message;
+		Component message;
 		final String name = player.getName();
 
 		synchronized (explorers) {
@@ -771,10 +816,13 @@ public class PdxExplorers extends JavaPlugin {
 				message = NO_FLYING_MSG;
 			} else {
 				if (currentToken == null) {
-					message = String.format(EXPLORATION_STARTED_MSG, token);
+					message = Component.text("You have started exploring ", NamedTextColor.YELLOW)
+							.append(Component.text(token, NamedTextColor.GREEN))
+							.append(Component.text("!", NamedTextColor.YELLOW));
 				} else {
-					message = ChatColor.YELLOW + "You have switched to exploring " + ChatColor.GREEN + token
-							+ ChatColor.YELLOW + "!";;
+					message = Component.text("You have switched to exploring ", NamedTextColor.YELLOW)
+							.append(Component.text(token, NamedTextColor.GREEN))
+							.append(Component.text("!", NamedTextColor.YELLOW));
 				}
 				explorers.put(name, new PlayerProgress(token));
 			}
@@ -791,28 +839,33 @@ public class PdxExplorers extends JavaPlugin {
 		Set<Object[]> badSigns = new HashSet<Object[]>();
 
 		for (Object[] location : signs) {
-			final World world = getServer().getWorld((String)location[0]);
-			final int x = (Integer)location[1];
-			final int y = (Integer)location[2];
-			final int z = (Integer)location[3];
+			final World world = getServer().getWorld((String) location[0]);
+			final int x = (Integer) location[1];
+			final int y = (Integer) location[2];
+			final int z = (Integer) location[3];
 
-			if (world == null) continue;
-			if (world.isChunkLoaded(x/16, z/16)) {
+			if (world == null)
+				continue;
+			if (world.isChunkLoaded(x / 16, z / 16)) {
 				final Block block = world.getBlockAt(x, y, z);
 				final BlockState state = block.getState();
 				if (state instanceof Sign) {
 					final Sign sign = (Sign) state;
 
-					final String token = sign.getLine(2);
-					final Route route = routes.get(token.replaceAll(" ", ""));
+					final Component token = sign.line(2);
+					if (token instanceof TextComponent) {
+						final TextComponent text = (TextComponent) token;
+						final Route route = routes.get(text.content().replaceAll(" ", ""));
 
-					if (route != null) {
-						final String nextName = route.pickWinner(counter);
-						sign.setLine(3, nextName);
-						sign.update();
+						if (route != null) {
+							final Component nextName = route.pickWinner(counter);
+							sign.line(3, nextName);
+							sign.update();
+						}
+
+						continue; // Avoid adding this to badSigns
+
 					}
-
-					continue; // Avoid adding this to badSigns
 				}
 				badSigns.add(location);
 			}
@@ -823,14 +876,15 @@ public class PdxExplorers extends JavaPlugin {
 
 	/**
 	 * Perform checks when a player uses a route protected block.
-	 * @param player Player using the block
+	 * 
+	 * @param player    Player using the block
 	 * @param routeName Route protecting the block
-	 * @param cst Type of protection being used.
+	 * @param cst       Type of protection being used.
 	 * @throws ExplorersException Exceptions will be generated when the route
-	 *         does not exist or when permission is denied.
+	 *                            does not exist or when permission is denied.
 	 */
 	public void allowUseLockedBlock(Player player, String routeName, CommandSignType cst) throws ExplorersException {
-		
+
 		final boolean success;
 
 		if (cst == CommandSignType.LOCK_SIGN) {
@@ -841,7 +895,8 @@ public class PdxExplorers extends JavaPlugin {
 			success = p != null && p.getToken().equalsIgnoreCase(routeName);
 		}
 
-		if (success) return;
+		if (success)
+			return;
 		if (player.hasPermission(LOCK_OVERRIDE_PERMISSION)) {
 			player.sendMessage(LOCK_OVERRIDE_MSG);
 			return;
